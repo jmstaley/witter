@@ -407,18 +407,25 @@ class Witter():
             #structure we call out getStatus method with the contents of the USER structure
             #and the values of top level values text/id/created_at
             [self.getStatus(x['user'],x['text'], x['id'], x['created_at'],x['in_reply_to_screen_name'], x['in_reply_to_status_id'], "tweet") for x in data]
+	    hildon.hildon_banner_show_information(self.window,"","Tweets Received")
+	    
         except IOError, e:
-            
+            msg = 'Error retrieving tweets '
+	    if hasattr(e, 'reason'):
+		    msg = msg + str(e.reason)
+		    
             if hasattr(e, 'code'):
                 if (e.code == 401):
                     reason = "Not authorised: check uid/pwd"
+		elif(e.code == 503):
+		    reason = "Service unavailable"
                 else:
                     reason = ""
-                msg = 'Server returned ' + str(e.code) + " : " + reason
-                note = hildon.hildon_note_new_information(self.window, msg)
-                note.run()
-                note.destroy()
-                
+                msg = msg +'Server returned ' + str(e.code) + " : " + reason
+		
+	    note = hildon.hildon_note_new_information(self.window, msg)
+            note.run()
+	    note.destroy()
 
           
         
@@ -451,16 +458,27 @@ class Witter():
             #structure we call out getStatus method with the contents of the USER structure
             #and the values of top level values text/id/created_at
             [self.getStatus(x['sender'],x['text'], x['id'], x['created_at'],None, None, "dm") for x in data]
+	    hildon.hildon_banner_show_information(self.window,"","DMs Received")
+	    
         except IOError, e:
+            msg = 'Error retrieving DMs '
+	    if hasattr(e, 'reason'):
+		    msg = msg + str(e.reason)
+		    
             if hasattr(e, 'code'):
                 if (e.code == 401):
                     reason = "Not authorised: check uid/pwd"
+		elif(e.code == 503):
+		    reason = "Service unavailable"
                 else:
                     reason = ""
-                msg = 'Server returned ' + str(e.code) + " : " + reason
-                note = hildon.hildon_note_new_information(self.window, msg)
-                note.run()
-                note.destroy()
+                msg = msg +'Server returned ' + str(e.code) + " : " + reason
+		
+	    note = hildon.hildon_note_new_information(self.window, msg)
+            note.run()
+	    note.destroy()
+
+
 
     def getMentions(self, *args):
         print "getting Mentions"
@@ -493,16 +511,27 @@ class Witter():
             #structure we call out getStatus method with the contents of the USER structure
             #and the values of top level values text/id/created_at
             [self.getStatus(x['user'],x['text'], x['id'], x['created_at'],x['in_reply_to_screen_name'], x['in_reply_to_status_id'], "mention") for x in data]
+	    hildon.hildon_banner_show_information(self.window,"","Mentions Received")
+	    
         except IOError, e:
+            msg = 'Error retrieving Mentions '
+	    if hasattr(e, 'reason'):
+		    msg = msg + str(e.reason)
+		    
             if hasattr(e, 'code'):
                 if (e.code == 401):
                     reason = "Not authorised: check uid/pwd"
+		elif(e.code == 503):
+		    reason = "Service unavailable"
                 else:
                     reason = ""
-                msg = 'Server returned ' + str(e.code) + " : " + reason
-                note = hildon.hildon_note_new_information(self.window, msg)
-                note.run()
-                note.destroy()
+                msg = msg +'Server returned ' + str(e.code) + " : " + reason
+		
+	    note = hildon.hildon_note_new_information(self.window, msg)
+            note.run()
+	    note.destroy()
+
+
         
     def getPublic(self, *args):
         print "getting Public timeline"
@@ -533,16 +562,27 @@ class Witter():
             #structure we call out getStatus method with the contents of the USER structure
             #and the values of top level values text/id/created_at
             [self.getStatus(x['user'],x['text'], x['id'], x['created_at'],x['in_reply_to_screen_name'], x['in_reply_to_status_id'], "public") for x in data]
+	    hildon.hildon_banner_show_information(self.window,"","Public Timeline Received")
+	    
         except IOError, e:
+            msg = 'Error retrieving Public timeline '
+	    if hasattr(e, 'reason'):
+		    msg = msg + str(e.reason)
+		    
             if hasattr(e, 'code'):
                 if (e.code == 401):
                     reason = "Not authorised: check uid/pwd"
+		elif(e.code == 503):
+		    reason = "Service unavailable"
                 else:
                     reason = ""
-                msg = 'Server returned ' + str(e.code) + " : " + reason
-                note = hildon.hildon_note_new_information(self.window, msg)
-                note.run()
-                note.destroy()
+                msg = msg +'Server returned ' + str(e.code) + " : " + reason
+		
+	    note = hildon.hildon_note_new_information(self.window, msg)
+            note.run()
+	    note.destroy()
+
+
             
     def getSearch(self, *args):
         print "performing search"
@@ -589,16 +629,27 @@ class Witter():
   
             results = data['results']
             [self.getStatus(x['from_user'],x['text'], x['id'], x['created_at'],None, None, "search") for x in results]
+	    hildon.hildon_banner_show_information(self.window,"","Search results Received")
+	    
         except IOError, e:
+            msg = 'Error retrieving search results '
+	    if hasattr(e, 'reason'):
+		    msg = msg + str(e.reason)
+		    
             if hasattr(e, 'code'):
                 if (e.code == 401):
                     reason = "Not authorised: check uid/pwd"
+		elif(e.code == 503):
+		    reason = "Service unavailable"
                 else:
                     reason = ""
-                msg = 'Server returned ' + str(e.code) + " : " + reason
-                note = hildon.hildon_note_new_information(self.window, msg)
-                note.run()
-                note.destroy()
+                msg = msg +'Server returned ' + str(e.code) + " : " + reason
+		
+	    note = hildon.hildon_note_new_information(self.window, msg)
+            note.run()
+	    note.destroy()
+
+
             
     def getTrends(self, *args):
         print "getting Trending topics"
@@ -629,16 +680,27 @@ class Witter():
             #and the values of top level values text/id/created_at
             trends = data['trends']
             [self.getTrend(x['name'], x['url']) for x in trends]
+	    hildon.hildon_banner_show_information(self.window,"","Trends Received")
+	    
         except IOError, e:
+            msg = 'Error retrieving trends '
+	    if hasattr(e, 'reason'):
+		    msg = msg + str(e.reason)
+		    
             if hasattr(e, 'code'):
                 if (e.code == 401):
                     reason = "Not authorised: check uid/pwd"
+		elif(e.code == 503):
+		    reason = "Service unavailable"
                 else:
                     reason = ""
-                msg = 'Server returned ' + str(e.code) + " : " + reason
-                note = hildon.hildon_note_new_information(self.window, msg)
-                note.run()
-                note.destroy()
+                msg = msg +'Server returned ' + str(e.code) + " : " + reason
+		
+	    note = hildon.hildon_note_new_information(self.window, msg)
+            note.run()
+	    note.destroy()
+
+
             
     def getTrend(self, name, url):
         
@@ -680,16 +742,27 @@ class Witter():
                     self.getStatus(x['screen_name'],x['status'], x['id'], x['created_at'],None,None, "friend") 
                 except KeyError:
                     print  x
+	    hildon.hildon_banner_show_information(self.window,"","Friends Received")
+	    
         except IOError, e:
+            msg = 'Error retrieving friends '
+	    if hasattr(e, 'reason'):
+		    msg = msg + str(e.reason)
+		    
             if hasattr(e, 'code'):
                 if (e.code == 401):
                     reason = "Not authorised: check uid/pwd"
+		elif(e.code == 503):
+		    reason = "Service unavailable"
                 else:
                     reason = ""
-                msg = 'Server returned ' + str(e.code) + " : " + reason
-                note = hildon.hildon_note_new_information(self.window, msg)
-                note.run()
-                note.destroy()   
+                msg = msg +'Server returned ' + str(e.code) + " : " + reason
+		
+	    note = hildon.hildon_note_new_information(self.window, msg)
+            note.run()
+	    note.destroy()
+
+
         
     def getStatus(self, user,data, id, created_at, in_reply_to_screen_name, in_reply_to_id, type):
         #at this point user is another JSON structure of lots more values of which we are currently
