@@ -43,6 +43,14 @@ import ConfigParser
 import pycurl
 
 
+import random
+import witter
+import time
+
+gtk.gdk.threads_init()
+
+
+
 #Initially I found I'd hang the whole interface if I was having network probs
 #because by default there is an unlimited wait on connect so I set
 #the timeout to 10 seconds afterwhich you get back a timeout error
@@ -50,16 +58,27 @@ import pycurl
 timeout = 10
 socket.setdefaulttimeout(timeout)
 
-
 #the main witter application
 class Witter():
     #first an init method to set everything up    
     def __init__(self):
-         #make the hildon program
+	#defaults for auto-refresh
+	self.timelineRefresh = 30
+	self.mentionsRefresh = 30
+	self.DMsRefresh = 30
+	self.publicRefresh = 0
+	self.refreshtask = None
+	self.dmresfresh = None
+	self.mentionrefresh = None
+	self.publicrefresh = None
+	self.username = "UserName"
+	self.password = ""
+	
+	#make the hildon program
         self.program = hildon.Program()
         self.program.__init__()
 
-        osso_c = osso.Context("witter","0.1.0", False) 
+        self.osso_c = osso.Context("witter","0.1.1", False) 
         # set name of application: this shows in titlebar
         gtk.set_application_name("Witter")
         self.twitterUrlRoot = "http://twitter.com/"
@@ -71,6 +90,11 @@ class Witter():
         self.serviceUrlRoot = self.twitterUrlRoot
         self.searchServiceUrlRoot = self.twitterSearchUrlRoot
         self.serviceName = self.twitterName
+	 #used to store the id of message if we're going to do a reply_to
+        self.reply_to=None
+        self.reply_to_name=None
+	self.retweetname=None
+	self.retweetid=None
         #Set the Glade file
        # self.gladefile = "/usr/share/witter/witter.glade"  
         #self.wTree = gtk.glade.XML(self.gladefile) 
@@ -88,10 +112,33 @@ class Witter():
             "on_trend_clicked" : self.switchView,
             "on_insert_clicked" : self.twitPic,
             "on_friends_clicked" : self.switchView,
+	    "on_cancel_clicked" : self.gtk_widget_hide,
+	    "setProps" : self.setProps,
         }
         self.builder.connect_signals(dic)
         #self.wTree.signal_autoconnect( dic )
-        self.textcolour="#FFFFFF"
+	
+	#fix the buttons to get the style right 
+        refreshButton = self.builder.get_object("Refresh")
+	tweetButton = self.builder.get_object("Tweet")
+	timelineButton = self.builder.get_object("timeline")
+	mentionsButton = self.builder.get_object("mentions")
+	dmsButton = self.builder.get_object("direct messages")
+	searchButton = self.builder.get_object("search")
+	friendsButton = self.builder.get_object("friends")
+	okButton = self.builder.get_object("Ok")
+	cancelButton = self.builder.get_object("Cancel")
+	refreshButton.set_name("HildonButton-finger")
+	tweetButton.set_name("HildonButton-finger")
+	timelineButton.set_name("HildonButton-finger")
+	mentionsButton.set_name("HildonButton-finger")
+	dmsButton.set_name("HildonButton-finger")
+	searchButton.set_name("HildonButton-finger")
+	friendsButton.set_name("HildonButton-finger")
+	okButton.set_name("HildonButton-finger")
+	cancelButton.set_name("HildonButton-finger")
+	
+	self.textcolour="#FFFFFF"
         #
         #go read config file
         #
@@ -121,12 +168,13 @@ class Witter():
         #reparent the vbox1 from glade to self.window
         # self.vbox = self.wTree.get_widget("vbox1")
         self.vbox = self.builder.get_object("vbox1")
-        pannedWindow = hildon.PannableArea()
+        #pannedWindow = hildon.PannableArea()
+	pannedWindow = self.builder.get_object("pannableArea")
         # hildon.hildon_pannable_area_new_full(mode, enabled, vel_min, vel_max, decel, sps)
 
         #self.scrolled_window = self.wTree.get_widget("scrolled_window")
         self.vbox.reparent(self.window)
-        self.vbox.pack_end(pannedWindow)
+        #self.vbox.pack_end(pannedWindow)
         
         self.urlmenu = self.build_right_click_menu()
         # create a menu object by calling a method to deine it
@@ -155,6 +203,7 @@ class Witter():
         #we want auto-complete of @references 
         #self.tweetText = self.wTree.get_widget("TweetText")
         self.tweetText = self.builder.get_object("TweetText")
+	self.tweetText.connect("changed", self.CharsRemaining)
         tweetComplete = gtk.EntryCompletion()
         tweetComplete.set_model(self.friendsliststore)
         tweetComplete.set_text_column(0)
@@ -165,12 +214,16 @@ class Witter():
         # create the TreeView using treestore this is the object which displays the
         # info stored in the liststore
         self.treeview = gtk.TreeView(self.liststore)
+	#self.treeview = hildon.hildon_gtk_tree_view_new(self.liststore)
         self.treeview.set_model(self.liststore)
         # create the TreeViewColumn to display the data, I decided on two colums
         # one for name and the other for the tweet
         #self.tvcname = gtk.TreeViewColumn('Name')
-        cell = gtk.CellRendererText()
-        self.tvctweet = gtk.TreeViewColumn('Pango Markup', cell, markup=2)
+        #cell = witter.witter_cell_renderer.witterCellRender()
+	cell = gtk.CellRendererText()
+        cell.set_property('background',"#6495ED")
+	
+	self.tvctweet = gtk.TreeViewColumn('Pango Markup', cell, markup=2)
 
         #self.tvctweet = gtk.TreeViewColumn('Tweet')
         # add the two tree view columns to the treeview
@@ -224,16 +277,21 @@ class Witter():
 
         # self.treeview.connect("changed", self.build_menu, None);
         self.treeview.tap_and_hold_setup(self.urlmenu, callback=gtk.tap_and_hold_menu_position_top)
+	
         if (re.search("UserName",self.username)):
 	       self.promptForCredentials() 
-        #used to store the id of message if we're going to do a reply_to
-        self.reply_to=None
-        self.reply_to_name=None
+	#call the refresh thread
+	self.gettingTweets = False
+	self.start_refresh_threads()
+	       
         
     def quit(self, *args):
         #this is our end method called when window is closed
         print "Stop Wittering"
-        self.writeConfig()
+	print "shutting down refresh loop"
+	self.writeConfig()
+	self.end_refresh_threads()
+	
         gtk.main_quit()
        
     def create_menu(self, widget):
@@ -328,6 +386,20 @@ class Witter():
         Service.connect("clicked", self.switchService)
         Service.show()
         menu.append(Service)
+	
+	Properties= hildon.GtkButton(gtk.HILDON_SIZE_AUTO)
+        Properties.set_label("Properties")
+        # Attach callback to clicked signal
+        Properties.connect("clicked", self.configProperties)
+        Properties.show()
+        menu.append(Properties)
+	
+	About = hildon.GtkButton(gtk.HILDON_SIZE_AUTO)
+        About.set_label("About")
+        # Attach callback to clicked signal
+        About.connect("clicked", self.about)
+        About.show()
+        menu.append(About)
         
         #invert no longer works
         #Invert = hildon.GtkButton(gtk.HILDON_SIZE_AUTO)
@@ -355,8 +427,10 @@ class Witter():
         self.window.show_all()
         self.window.connect("key-press-event", self.on_key_press)
         self.window.connect("window-state-event", self.on_window_state_change)
+	
         #this starts everything up
         gtk.main() 
+	
         
     def updateSelectedView(self, *args):
         #call the get method for whichever liststore we're viewing
@@ -375,7 +449,8 @@ class Witter():
         elif (self.treeview.get_model() == self.searchliststore):
             self.getSearch()
             
-    def getTweets(self, *args):
+    def getTweets(self, auto=0, *args):
+	self.gettingTweets = True
         print "getting tweets"
         #Now for the main logic...fetching tweets
         #at the moment I'm just using basic auth. 
@@ -406,10 +481,14 @@ class Witter():
             #then this line does all the hard work. Basicaly for evey top level object in the JSON
             #structure we call out getStatus method with the contents of the USER structure
             #and the values of top level values text/id/created_at
-            [self.getStatus(x['user'],x['text'], x['id'], x['created_at'],x['in_reply_to_screen_name'], x['in_reply_to_status_id'], "tweet") for x in data]
-	    hildon.hildon_banner_show_information(self.window,"","Tweets Received")
-	    
+	    [self.getStatus(x['user'],x['text'], x['id'], x['created_at'],x['in_reply_to_screen_name'], x['in_reply_to_status_id'], "tweet") for x in data]
+	    #hildon.hildon_banner_show_information(self.window,"","Tweets Received")
+	    note = osso.SystemNote(self.osso_c)
+
+	    result = note.system_note_infoprint("Tweets Received")
+	    self.gettingTweets = False
         except IOError, e:
+	    print "error"
             msg = 'Error retrieving tweets '
 	    if hasattr(e, 'reason'):
 		    msg = msg + str(e.reason)
@@ -422,14 +501,16 @@ class Witter():
                 else:
                     reason = ""
                 msg = msg +'Server returned ' + str(e.code) + " : " + reason
-		
-	    note = hildon.hildon_note_new_information(self.window, msg)
-            note.run()
-	    note.destroy()
+	    if (auto==0):
+		    note = osso.SystemNote(self.osso_c)
+		    note.system_note_dialog(msg, type='notice')
+
+	    self.gettingTweets = False
 
           
         
-    def getDMs(self, *args):
+    def getDMs(self, auto=0, *args):
+	self.gettingTweets = True
         print "getting DMs"
         #Now for the main logic...fetching tweets
         #at the moment I'm just using basic auth. 
@@ -458,8 +539,10 @@ class Witter():
             #structure we call out getStatus method with the contents of the USER structure
             #and the values of top level values text/id/created_at
             [self.getStatus(x['sender'],x['text'], x['id'], x['created_at'],None, None, "dm") for x in data]
-	    hildon.hildon_banner_show_information(self.window,"","DMs Received")
-	    
+	    note = osso.SystemNote(self.osso_c)
+
+	    result = note.system_note_infoprint("DMs Received")
+	    self.gettingTweets = False
         except IOError, e:
             msg = 'Error retrieving DMs '
 	    if hasattr(e, 'reason'):
@@ -473,14 +556,15 @@ class Witter():
                 else:
                     reason = ""
                 msg = msg +'Server returned ' + str(e.code) + " : " + reason
-		
-	    note = hildon.hildon_note_new_information(self.window, msg)
-            note.run()
-	    note.destroy()
+	    if (auto==0):
+		    note = osso.SystemNote(self.osso_c)
+		    note.system_note_dialog(msg, type='notice')
+	    self.gettingTweets = False
 
 
 
-    def getMentions(self, *args):
+    def getMentions(self, auto=0,*args):
+	self.gettingTweets = True
         print "getting Mentions"
         
         #Now for the main logic...fetching tweets
@@ -511,8 +595,10 @@ class Witter():
             #structure we call out getStatus method with the contents of the USER structure
             #and the values of top level values text/id/created_at
             [self.getStatus(x['user'],x['text'], x['id'], x['created_at'],x['in_reply_to_screen_name'], x['in_reply_to_status_id'], "mention") for x in data]
-	    hildon.hildon_banner_show_information(self.window,"","Mentions Received")
-	    
+	    note = osso.SystemNote(self.osso_c)
+
+	    result = note.system_note_infoprint("Mentions Received")
+	    self.gettingTweets = False
         except IOError, e:
             msg = 'Error retrieving Mentions '
 	    if hasattr(e, 'reason'):
@@ -526,14 +612,14 @@ class Witter():
                 else:
                     reason = ""
                 msg = msg +'Server returned ' + str(e.code) + " : " + reason
-		
-	    note = hildon.hildon_note_new_information(self.window, msg)
-            note.run()
-	    note.destroy()
-
+	    if (auto==0):
+		    note = osso.SystemNote(self.osso_c)
+		    note.system_note_dialog(msg, type='notice')
+	    self.gettingTweets = False
 
         
-    def getPublic(self, *args):
+    def getPublic(self, auto=0,*args):
+	self.gettingTweets = True
         print "getting Public timeline"
         #Now for the main logic...fetching tweets
         #at the moment I'm just using basic auth. 
@@ -562,8 +648,10 @@ class Witter():
             #structure we call out getStatus method with the contents of the USER structure
             #and the values of top level values text/id/created_at
             [self.getStatus(x['user'],x['text'], x['id'], x['created_at'],x['in_reply_to_screen_name'], x['in_reply_to_status_id'], "public") for x in data]
-	    hildon.hildon_banner_show_information(self.window,"","Public Timeline Received")
-	    
+	    note = osso.SystemNote(self.osso_c)
+
+	    result = note.system_note_infoprint("Public timeline Received")
+	    self.gettingTweets = False
         except IOError, e:
             msg = 'Error retrieving Public timeline '
 	    if hasattr(e, 'reason'):
@@ -577,11 +665,10 @@ class Witter():
                 else:
                     reason = ""
                 msg = msg +'Server returned ' + str(e.code) + " : " + reason
-		
-	    note = hildon.hildon_note_new_information(self.window, msg)
-            note.run()
-	    note.destroy()
-
+	    if(auto==0):	
+		    note = osso.SystemNote(self.osso_c)
+		    note.system_note_dialog(msg, type='notice')
+	    self.gettingTweets = False
 
             
     def getSearch(self, *args):
@@ -629,8 +716,9 @@ class Witter():
   
             results = data['results']
             [self.getStatus(x['from_user'],x['text'], x['id'], x['created_at'],None, None, "search") for x in results]
-	    hildon.hildon_banner_show_information(self.window,"","Search results Received")
-	    
+	    note = osso.SystemNote(self.osso_c)
+
+	    result = note.system_note_infoprint("Search results Received")
         except IOError, e:
             msg = 'Error retrieving search results '
 	    if hasattr(e, 'reason'):
@@ -645,9 +733,8 @@ class Witter():
                     reason = ""
                 msg = msg +'Server returned ' + str(e.code) + " : " + reason
 		
-	    note = hildon.hildon_note_new_information(self.window, msg)
-            note.run()
-	    note.destroy()
+	    note = osso.SystemNote(self.osso_c)
+	    note.system_note_dialog(msg, type='notice')
 
 
             
@@ -680,8 +767,9 @@ class Witter():
             #and the values of top level values text/id/created_at
             trends = data['trends']
             [self.getTrend(x['name'], x['url']) for x in trends]
-	    hildon.hildon_banner_show_information(self.window,"","Trends Received")
-	    
+	    note = osso.SystemNote(self.osso_c)
+
+	    result = note.system_note_infoprint("Trends Received")
         except IOError, e:
             msg = 'Error retrieving trends '
 	    if hasattr(e, 'reason'):
@@ -696,10 +784,8 @@ class Witter():
                     reason = ""
                 msg = msg +'Server returned ' + str(e.code) + " : " + reason
 		
-	    note = hildon.hildon_note_new_information(self.window, msg)
-            note.run()
-	    note.destroy()
-
+	    note = osso.SystemNote(self.osso_c)
+	    note.system_note_dialog(msg, type='notice')
 
             
     def getTrend(self, name, url):
@@ -742,8 +828,9 @@ class Witter():
                     self.getStatus(x['screen_name'],x['status'], x['id'], x['created_at'],None,None, "friend") 
                 except KeyError:
                     print  x
-	    hildon.hildon_banner_show_information(self.window,"","Friends Received")
-	    
+	    note = osso.SystemNote(self.osso_c)
+
+	    result = note.system_note_infoprint("Friends Received")
         except IOError, e:
             msg = 'Error retrieving friends '
 	    if hasattr(e, 'reason'):
@@ -882,18 +969,42 @@ class Witter():
                               passwd=self.password)
         opener = urllib2.build_opener(auth_handler)
         # ...and install it globally so it can be used with urlopen.
-        urllib2.install_opener(opener)
-        json = urllib2.urlopen(req)
-        #opener.close()
-        data = simplejson.loads(json.read())
-        #message sent, I'm assuming a failure to send would not continue
-        #in this method? so it's safe to remove the tweet line
-        # what I don't want is to lose the tweet I typed if we didn't
-        # sucessfully send it to twitter. that would be annoying (I'm looking
-        # at you Mauku)
-        self.builder.get_object("TweetText").set_text("")
-        self.reply_to_name = None
-        self.reply_to = None
+	try:
+		urllib2.install_opener(opener)
+		json = urllib2.urlopen(req)
+		#opener.close()
+		data = simplejson.loads(json.read())
+		#message sent, I'm assuming a failure to send would not continue
+		#in this method? so it's safe to remove the tweet line
+		# what I don't want is to lose the tweet I typed if we didn't
+		# sucessfully send it to twitter. that would be annoying (I'm looking
+		# at you Mauku)
+		self.builder.get_object("TweetText").set_text("")
+		hildon.hildon_banner_show_information(self.window,"","Tweet Successful")
+		self.reply_to_name = None
+		self.reply_to = None
+		#last thing to do is refresh main feed
+		self.getTweets()
+	except IOError, e:
+            msg = 'Error posting tweet '
+	    if hasattr(e, 'reason'):
+		    msg = msg + str(e.reason)
+		    
+            if hasattr(e, 'code'):
+                if (e.code == 401):
+                    reason = "Not authorised: check uid/pwd"
+		elif(e.code == 503):
+		    reason = "Service unavailable"
+                else:
+                    reason = ""
+                msg = msg +'Server returned ' + str(e.code) + " : " + reason
+		
+	    note = hildon.hildon_note_new_information(self.window, msg)
+            note.run()
+	    note.destroy()
+        
+	
+	
         
     def get_specific_tweet(self, screen_name, tweet_id):
         #this method gets an identified tweet from id and screenname
@@ -966,6 +1077,8 @@ class Witter():
         self.menuItemReplyTo.show()
         self.menuItemReTweet = gtk.MenuItem("ReTweet")
         urlmenu.append(self.menuItemReTweet)
+	self.menuItemReplyTo.connect("activate", self.replyTo)
+	self.menuItemReTweet.connect("activate", self.reTweet)
         self.menuItemReTweet.show()
         return urlmenu 
          
@@ -1014,8 +1127,11 @@ class Witter():
                 menuUserAct.append(menuItemUnFollowUser)
                 menuUserAct.show()
                 self.menuItemUserAction.set_submenu(menuUserAct)
-                self.menuItemReplyTo.connect("activate", self.replyTo, name, id)
-                self.menuItemReTweet.connect("activate", self.reTweet, name, id, entry)
+		self.reply_to = id
+		self.reply_to_name= name
+                self.retweetname = name
+		self.retweetid = id
+		
         except IndexError:
             print "nothing selected"
            
@@ -1079,17 +1195,47 @@ class Witter():
         data = simplejson.loads(json.read())
         print data
     
-    def replyTo(self, widget, name, id, *args):
-        print "reply to : " + name + " message_id " + id
-        self.tweetText.set_text(name)
-        self.reply_to = id
-        self.reply_to_name= name
+    def replyTo(self, widget, *args):
+        print "reply to : " + self.reply_to_name + " message_id " + self.reply_to
+        self.tweetText.set_text(self.reply_to_name)
+        
     
-    def reTweet(self, widget, name, id, tweet, *args):
-        print "reTweet : " + name + " message_id " + id
-        self.tweetText.set_text("RT:"+name+" "+tweet)
+    def reTweet(self, widget,  *args):
+        print "reTweet : " + self.retweetname + " message_id " +self.retweetid
         
-        
+	post = urllib.urlencode({ })
+        #build the request with the url and our post data
+        req = urllib2.Request('http://api.twitter.com/1/statuses/retweet/'+str(self.retweetid)+'L.json', post)
+        #setup the auth stuff
+        auth_handler = urllib2.HTTPBasicAuthHandler()
+        auth_handler.add_password(realm='Twitter API',
+                              uri='http://api.twitter.com/1/statuses/retweet/'+str(self.retweetid)+'L.json',
+                              user=self.username,
+                              passwd=self.password)
+        opener = urllib2.build_opener(auth_handler)
+        # ...and install it globally so it can be used with urlopen.
+	try:
+		urllib2.install_opener(opener)
+		json = urllib2.urlopen(req)
+		hildon.hildon_banner_show_information(self.window,"","ReTweet Successful")
+	except IOError, e:
+	    msg = 'Error posting tweet '
+	    if hasattr(e, 'reason'):
+		    msg = msg + str(e.reason)
+		    
+            if hasattr(e, 'code'):
+                if (e.code == 401):
+                    reason = "Not authorised: check uid/pwd"
+		elif(e.code == 503):
+		    reason = "Service unavailable"
+                else:
+                    reason = ""
+                msg = msg +'Server returned ' + str(e.code) + " : " + reason
+		
+	    note = hildon.hildon_note_new_information(self.window, msg)
+            note.run()
+	    note.destroy()
+	
     def openBrowser(self, widget, url, *args):      
         #open a url in a browser
         context = osso.Context("Witter", "1.0",False)
@@ -1127,12 +1273,12 @@ class Witter():
         try:
             config = ConfigParser.ConfigParser()
             config.readfp(open('/home/user/.witter'))
-
-            user = config.get("credentials", "username");
-            self.username=base64.b64decode(user)
-            password = config.get("credentials", "password");
-            self.password=base64.b64decode(password)
-            try:
+	    try:
+		user = config.get("credentials", "username");
+		self.username=base64.b64decode(user)
+		password = config.get("credentials", "password");
+		self.password=base64.b64decode(password)
+         
                 self.textcolour=config.get("UI","textcolour")
             except ConfigParser.NoSectionError:
                 print "no text colour setting"
@@ -1148,6 +1294,14 @@ class Witter():
                     self.serviceName=self.identicaName
             except ConfigParser.NoSectionError:
                 print "no text colour setting"
+	    try:
+		    self.timelineRefresh = int(config.get("refresh_interval", "timeline"))
+		    self.mentionsRefresh = int(config.get("refresh_interval","mentions"))
+		    self.DMsRefresh = int(config.get("refresh_interval","dm"))
+		    self.publicRefresh = int(config.get("refresh_interval","public"))
+	    except ConfigParser.NoSectionError:
+		print "No refresh_interval section"
+		
         except IOError:
             #couldn't find the file set uid so we can prompt
 	    #for creds
@@ -1174,6 +1328,12 @@ class Witter():
         f.write("password = "+base64.b64encode(self.password)+"\n")    
         f.write("[UI]\n")
         f.write("textcolour = "+self.textcolour+"\n")
+	f.write("[refresh_interval]\n")
+	f.write("timeline="+str(self.timelineRefresh)+"\n")
+	f.write("mentions="+str(self.mentionsRefresh)+"\n")
+	f.write("dm="+str(self.DMsRefresh)+"\n")
+	f.write("public="+str(self.publicRefresh)+"\n")
+	
     def promptForCredentials(self, *args):
         #dialog = self.wTree.get_widget("CredentialsDialog")
         dialog = self.builder.get_object("CredentialsDialog")
@@ -1185,8 +1345,6 @@ class Witter():
         print "store_creds called"
         
         #store the values set
-        #self.username = self.wTree.get_widget("UserName").get_text()
-        #self.password = self.wTree.get_widget("Password").get_text()
         self.username = self.builder.get_object("UserName").get_text()
         self.password = self.builder.get_object("Password").get_text()
         self.writeConfig()
@@ -1239,7 +1397,6 @@ class Witter():
         imageChose.remove_filter(filter)
         imageChose.add_filter(filter)
         imageChose.set_filter(filter)
-        imageChose.connect("response", self.gtk_widget_hide)
         imageChose.show()
         
     def alreadyRetrieved(self, liststore, *args):
@@ -1357,13 +1514,117 @@ class Witter():
             print "couldn't read file"
         print file
     
-   
+    def CharsRemaining(self, widget):
+	     tweet = self.builder.get_object("TweetText").get_text()
+	     counter = self.builder.get_object("Counter")
+	     counter.set_text((str(140-len(tweet))))
     
+     
+    def about(self,widget, *args):
+		dlg = gtk.AboutDialog()
+		dlg.set_version("0.1.1")
+		dlg.set_name("Witter")
+		dlg.set_authors(["Daniel Would"])
+		dlg.set_website("Homepage : http://danielwould.wordpress.com/witter/\nBugtracker : http://garage.maemo.org/witter")
+		def close(w, res):
+			if res == gtk.RESPONSE_CANCEL:
+				w.hide()
+		dlg.connect("response", close)
+		dlg.show()
+	
+    def configProperties(self, widget, *args):
+	    #dialog = self.wTree.get_widget("CredentialsDialog")
+	    dialog = self.builder.get_object("setRefreshDialog")
+            dialog.set_title("Witter Properties")
+            dialog.connect("response", self.gtk_widget_hide)
+	    self.timelineNumberEd = self.builder.get_object("timeline-NumberEditor")
+	    self.timelineNumberEd.set_value(self.timelineRefresh)
+	    self.mentionsNumberEd = self.builder.get_object("mentions-NumberEditor")
+	    self.mentionsNumberEd.set_value(self.mentionsRefresh)
+	    self.DMNumberEd = self.builder.get_object("DM-NumberEditor")
+	    self.DMNumberEd.set_value(self.DMsRefresh)
+	    self.publicNumberEd = self.builder.get_object("public-NumberEditor")
+	    self.publicNumberEd.set_value(self.publicRefresh)
+	
+            dialog.show()
+
+    def setProps(self, widget, *args):
+	    #set all the refresh inteval values
+	    self.timelineRefresh = self.timelineNumberEd.get_value()
+	    self.mentionsRefresh = self.mentionsNumberEd.get_value()
+	    self.DMsRefresh = self.DMNumberEd.get_value()
+	    self.publicRefresh = self.publicNumberEd.get_value()
+	    #stop and start the threads to pick up the new values
+	    self.end_refresh_threads()
+	    self.start_refresh_threads()
+	    
+    def end_refresh_threads(self):
+	    #end all the refresh threads
+	    if (self.refreshtask != None):
+		self.refreshtask.stop()
+	    if (self.dmresfresh != None):
+		self.dmrefresh.stop()
+	    if (self.mentionrefresh != None):
+		self.mentionrefresh.stop()
+	    if (self.publicrefresh != None):
+		self.publicrefresh.stop()
+	
+
+    def start_refresh_threads(self):
+	    #we store the refresh interval in minutes, but pass it through as a value in seconds
+	    #this method launches a thread for each of the views we want to have auto-refreshed
+	    if (self.timelineRefresh != 0):
+		    self.refreshtask = witter.RefreshTask(self.getTweetsWrapper, self.showBusy)
+		    self.refreshtask.start(self.timelineRefresh*60, self)
+	    if (self.DMsRefresh != 0):
+		    self.dmrefresh = witter.RefreshTask(self.getDMsWrapper, self.showBusy)
+		    self.dmrefresh.start(self.DMsRefresh*60, self)
+	    if (self.mentionsRefresh != 0):
+		    self.mentionrefresh = witter.RefreshTask(self.getMentionsWrapper, self.showBusy)
+		    self.mentionrefresh.start(self.mentionsRefresh*60, self)
+	    if (self.publicRefresh != 0) :
+		    self.publicrefresh = witter.RefreshTask(self.getPublicWrapper, self.showBusy)
+		    self.publicrefresh.start(self.publicRefresh*60, self)
+	    print "end refresh setup"
+	    
+    def getTweetsWrapper(self, *args):
+	    
+	    self.getTweets(auto=1)
+	    
+	    return "done"
+	    
+    def getDMsWrapper(self, *args):
+	    #we want to randomise the streams so they don't clash
+	    #time.sleep(random.randint(1, 30))
+	    #if (self.gettingTweets == False):
+	    self.getDMs(auto=1)
+	  
+	    return "done"
+	    
+    def getMentionsWrapper(self, *args):
+	    #we want to randomise the streams so they don't clash
+	    #time.sleep(random.randint(1, 30))
+	    #if (self.gettingTweets == False):
+	    self.getMentions(auto=1)
+	    
+	    return "done"
+
+    def getPublicWrapper(self, *args):
+	    #we want to randomise the streams so they don't clash
+	    #time.sleep(random.randint(1, 30))
+	    #if (self.gettingTweets == False):
+	    self.getPublic(auto=1)
+	    return "done"
+	    
+    def showBusy(self, *args):
+	    print "running"
+	    return "still running"
+	    
+	    
 if __name__ == "__main__":  
     #this is just what initialises the app and calls run
     app = Witter() 
+   
     app.run()         
-    
-    
-
-
+   
+   

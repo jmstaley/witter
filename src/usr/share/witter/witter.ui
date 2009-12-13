@@ -76,6 +76,15 @@
             <property name="position">0</property>
           </packing>
         </child>
+	<child>
+	  <object class="HildonPannableArea" id="pannableArea">
+	    <property name="visible">True</property>
+	  </object>
+	  <packing>
+            <property name="expand">True</property>
+            <property name="position">1</property>
+          </packing>
+	</child>
         <child>
           <object class="GtkHBox" id="hbox1">
             <property name="visible">True</property>
@@ -87,7 +96,19 @@
                 <property name="invisible_char">&#x25CF;</property>
               </object>
               <packing>
-                <property name="position">0</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+	    <child>
+              <object class="GtkLabel" id="Counter">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+		<property name="label" translatable="yes">140</property>
+	      </object>
+              <packing>
+		<property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">1</property>
               </packing>
             </child>
             <child>
@@ -101,13 +122,13 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">False</property>
-                <property name="position">1</property>
+                <property name="position">2</property>
               </packing>
             </child>
             <child>
-              <object class="HildonButton" id="Load Tweets">
+              <object class="HildonButton" id="Refresh">
                 <property name="label" translatable="yes">Refresh</property>
-                <property name="visible">True</property>
+		<property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <signal name="clicked" handler="getTweets"/>
@@ -115,13 +136,13 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">False</property>
-                <property name="position">2</property>
+                <property name="position">0</property>
               </packing>
             </child>
           </object>
           <packing>
             <property name="expand">False</property>
-            <property name="position">1</property>
+            <property name="position">2</property>
           </packing>
         </child>
         <child>
@@ -215,7 +236,7 @@
       <action-widget response="0">Cancel</action-widget>
     </action-widgets>
   </object>
-  <object class="HildonFileChooserDialog" id="filechooserdialog1">
+  <object class="GtkFileChooserDialog" id="filechooserdialog1">
     <property name="border_width">5</property>
     <property name="modal">True</property>
     <property name="window_position">center</property>
@@ -276,6 +297,162 @@
     </child>
     <action-widgets>
       <action-widget response="0">insert</action-widget>
+      <action-widget response="0">cancel</action-widget>
+    </action-widgets>
+  </object>
+  <object class="GtkDialog" id="setRefreshDialog">
+    <property name="border_width">5</property>
+    <property name="title" translatable="yes">Set Properties</property>
+    <property name="resizable">False</property>
+    <property name="modal">True</property>
+    <property name="window_position">center</property>
+    <property name="destroy_with_parent">True</property>
+    <property name="type_hint">dialog</property>
+    <property name="gravity">center</property>
+    <property name="has_separator">False</property>
+    <signal name="response" handler="gtk_widget_destroy" object="gtk.RESPONSE_YES"/>
+    <child internal-child="vbox">
+      <object class="GtkVBox" id="props-dialog-vbox1">
+        <property name="visible">True</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child>
+          <object class="GtkVBox" id="props-vbox1">
+            <property name="visible">True</property>
+            <property name="orientation">vertical</property>
+	    <child>
+              <object class="GtkLabel" id="props-info">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">Values are in minutes, 0=never</property>
+              </object>
+              <packing>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="timeline">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">timeline refresh interval</property>
+              </object>
+              <packing>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="HildonNumberEditor" id="timeline-NumberEditor">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="invisible_char">&#x25CF;</property>
+              </object>
+              <packing>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="refresh">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">mentions refresh interval</property>
+              </object>
+              <packing>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="HildonNumberEditor" id="mentions-NumberEditor">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="invisible_char">&#x25CF;</property>
+              </object>
+              <packing>
+                <property name="position">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="dm">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">DM refresh interval</property>
+              </object>
+              <packing>
+                <property name="position">4</property>
+              </packing>
+            </child>
+            <child>
+              <object class="HildonNumberEditor" id="DM-NumberEditor">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="invisible_char">&#x25CF;</property>
+              </object>
+              <packing>
+                <property name="position">5</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="public">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">public refresh interval</property>
+              </object>
+              <packing>
+                <property name="position">6</property>
+              </packing>
+            </child>
+            <child>
+              <object class="HildonNumberEditor" id="public-NumberEditor">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="invisible_char">&#x25CF;</property>
+              </object>
+              <packing>
+                <property name="position">7</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child internal-child="action_area">
+          <object class="GtkHButtonBox" id="props-dialog-action_area1">
+            <property name="visible">True</property>
+            <property name="layout_style">end</property>
+            <child>
+              <object class="HildonButton" id="refresh_store">
+                <property name="label" translatable="yes">ok</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+		<signal name="clicked" handler="setProps" object="gtk.RESPONSE_YES"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="HildonButton" id="props-cancel">
+                <property name="label" translatable="yes">cancel</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+		<signal name="clicked" handler="on_cancel_clicked"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="pack_type">end</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <action-widgets>
+      <action-widget response="0">refresh_store</action-widget>
       <action-widget response="0">cancel</action-widget>
     </action-widgets>
   </object>

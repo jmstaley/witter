@@ -1,3 +1,4 @@
 [D-BUS Service]
 Name=com.nokia.witter
-Exec=/usr/bin/witter
+Exec=/opt/witter/witter.py
+
