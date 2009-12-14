@@ -151,7 +151,7 @@
       </object>
     </child>
   </object>
-  <object class="GtkDialog" id="CredentialsDialog">
+  <object class="HildonDialog" id="CredentialsDialog">
     <property name="border_width">5</property>
     <property name="title" translatable="yes">Enter Credentials</property>
     <property name="resizable">False</property>
@@ -161,14 +161,14 @@
     <property name="type_hint">dialog</property>
     <property name="gravity">center</property>
     <property name="has_separator">False</property>
-    <signal name="response" handler="gtk_widget_destroy" object="gtk.RESPONSE_YES"/>
+    
     <child internal-child="vbox">
       <object class="GtkVBox" id="dialog-vbox1">
         <property name="visible">True</property>
         <property name="orientation">vertical</property>
         <property name="spacing">2</property>
         <child>
-          <object class="GtkEntry" id="UserName">
+          <object class="HildonEntry" id="UserName">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="text" translatable="yes">UserName</property>
@@ -179,7 +179,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkEntry" id="Password">
+          <object class="HildonEntry" id="Password">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="visibility">False</property>
@@ -214,7 +214,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <signal name="clicked" handler="gtk_widget_destroy"/>
+                <signal name="clicked" handler="on_cancel_clicked"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -300,7 +300,7 @@
       <action-widget response="0">cancel</action-widget>
     </action-widgets>
   </object>
-  <object class="GtkDialog" id="setRefreshDialog">
+  <object class="HildonDialog" id="setRefreshDialog">
     <property name="border_width">5</property>
     <property name="title" translatable="yes">Set Properties</property>
     <property name="resizable">False</property>
@@ -310,7 +310,7 @@
     <property name="type_hint">dialog</property>
     <property name="gravity">center</property>
     <property name="has_separator">False</property>
-    <signal name="response" handler="gtk_widget_destroy" object="gtk.RESPONSE_YES"/>
+    
     <child internal-child="vbox">
       <object class="GtkVBox" id="props-dialog-vbox1">
         <property name="visible">True</property>
@@ -330,7 +330,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkLabel" id="timeline">
+              <object class="GtkLabel" id="timeline-label">
                 <property name="visible">True</property>
                 <property name="label" translatable="yes">timeline refresh interval</property>
               </object>
@@ -405,6 +405,25 @@
                 <property name="position">7</property>
               </packing>
             </child>
+	    <child>
+              <object class="GtkLabel" id="search-refresh">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">search refresh interval</property>
+              </object>
+              <packing>
+                <property name="position">8</property>
+              </packing>
+            </child>
+	     <child>
+              <object class="HildonNumberEditor" id="search-NumberEditor">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="invisible_char">&#x25CF;</property>
+              </object>
+              <packing>
+                <property name="position">9</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="position">1</property>
@@ -434,7 +453,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-		<signal name="clicked" handler="on_cancel_clicked"/>
+		<signal name="clicked" handler="nosetProps" object="gtk.RESPONSE_CANCEL"/>
               </object>
               <packing>
                 <property name="expand">False</property>

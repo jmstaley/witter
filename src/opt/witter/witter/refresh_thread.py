@@ -39,8 +39,11 @@ class RefreshTask(object):
 		count = 0;
 		self.callback(*args)
 		#sleep and check, wake up every 10 seconds and check if we've been told to end
-		while ((count != (sleep/10)) & (self._stopped !=True)):
+		while (count != (sleep/10)):
 			time.sleep(10)
+			if (self._stopped == True):
+				print "killing thread"
+				return
 			count = count +1;
 		
 #not yet used, this was from an example I found, I may use it to show some kind of 'busy updating' indicator

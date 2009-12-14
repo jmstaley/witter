@@ -63,14 +63,18 @@ class Witter():
     #first an init method to set everything up    
     def __init__(self):
 	#defaults for auto-refresh
-	self.timelineRefresh = 30
-	self.mentionsRefresh = 30
-	self.DMsRefresh = 30
-	self.publicRefresh = 0
+	self.timelineRefreshInterval = 30
+	self.mentionsRefreshInterval = 30
+	
+	self.DMsRefreshInterval = 30
+	self.publicRefreshInterval = 0
+	self.searchRefreshInterval = 0
+	self.search_terms = ""
 	self.refreshtask = None
 	self.dmresfresh = None
 	self.mentionrefresh = None
 	self.publicrefresh = None
+	self.searchrefresh = None
 	self.username = "UserName"
 	self.password = ""
 	
@@ -102,7 +106,7 @@ class Witter():
         self.builder.add_from_file("/usr/share/witter/witter.ui") 
         #map all the signals
         dic = { 
-            "newTweet" : self.newTweet,
+            "newTweet" : self.enterPressed,
             "getTweets" : self.updateSelectedView,
             "storecreds" : self.store_creds,
             "on_timeline_clicked" : self.switchView,
@@ -112,8 +116,8 @@ class Witter():
             "on_trend_clicked" : self.switchView,
             "on_insert_clicked" : self.twitPic,
             "on_friends_clicked" : self.switchView,
-	    "on_cancel_clicked" : self.gtk_widget_hide,
 	    "setProps" : self.setProps,
+	    "nosetProps" : self.dontsetProps,
         }
         self.builder.connect_signals(dic)
         #self.wTree.signal_autoconnect( dic )
@@ -128,6 +132,8 @@ class Witter():
 	friendsButton = self.builder.get_object("friends")
 	okButton = self.builder.get_object("Ok")
 	cancelButton = self.builder.get_object("Cancel")
+	propscancelButton = self.builder.get_object("props-cancel")
+	refreshstoreButton = self.builder.get_object("refresh_store")
 	refreshButton.set_name("HildonButton-finger")
 	tweetButton.set_name("HildonButton-finger")
 	timelineButton.set_name("HildonButton-finger")
@@ -137,6 +143,8 @@ class Witter():
 	friendsButton.set_name("HildonButton-finger")
 	okButton.set_name("HildonButton-finger")
 	cancelButton.set_name("HildonButton-finger")
+	propscancelButton.set_name("HildonButton-finger")
+	refreshstoreButton.set_name("HildonButton-finger")
 	
 	self.textcolour="#FFFFFF"
         #
@@ -277,7 +285,8 @@ class Witter():
 
         # self.treeview.connect("changed", self.build_menu, None);
         self.treeview.tap_and_hold_setup(self.urlmenu, callback=gtk.tap_and_hold_menu_position_top)
-	
+	#init the configDialog
+	self.configDialog = None
         if (re.search("UserName",self.username)):
 	       self.promptForCredentials() 
 	#call the refresh thread
@@ -671,70 +680,78 @@ class Witter():
 	    self.gettingTweets = False
 
             
-    def getSearch(self, *args):
+    def getSearch(self, auto=0,*args):
         print "performing search"
+	#clear any previous stuff, currenlty we'll just get one page of search results
         self.searchliststore.clear()
         #overloading the tweet text input as the search criteria
-        tweet = self.builder.get_object("TweetText").get_text()
-        
+        searchterm = self.builder.get_object("TweetText").get_text()
+        if (auto==1):
+		#auto search performed frrom the saved search
+		searchterm = self.search_terms
+		
         #see if we have just an empty string (eg eroneous button press)
-        if (tweet == ""):
+        if (searchterm == ""):
             print "nothing to search"
             return
-        #clear any previous stuff, currenlty we'll just get one page of search results
-        self.trendliststore.clear()
         
-        tweet = unicode(tweet).encode('utf-8')
-        #then we need to urlencode so that we can use twitter chars like @ without
-        #causing problems
-        search = urllib.urlencode({ 'q' : tweet })
         
-        #Now for the main logic...fetching tweets
-        #at the moment I'm just using basic auth. 
-        #urllib2 provides all the HTTP handling stuff
-        auth_handler = urllib2.HTTPBasicAuthHandler()
-        #realm here is important. or at least it seemed to be
-        #this info is on the login box if you go to the url in a browser
-        auth_handler.add_password(realm='Twitter API',
-                          uri=self.searchServiceUrlRoot+'/search.json',
-                          user=self.username,
-                          passwd=self.password)
-        #we create an 'opener' object with our auth_handler
-        opener = urllib2.build_opener(auth_handler)
-        # ...and install it globally so it can be used with urlopen.
-        urllib2.install_opener(opener)
-        
-        try:
-            json = urllib2.urlopen(self.searchServiceUrlRoot+'search.json?'+search)
-            
-            #JSON is awesome stuff. we get given a long string of json encoded information
-            #which contains all the tweets, with lots of info, we decode to a json object
-            data = simplejson.loads(json.read())
-            #then this line does all the hard work. Basicaly for evey top level object in the JSON
-            #structure we call out getStatus method with the contents of the USER structure
-            #and the values of top level values text/id/created_at
-  
-            results = data['results']
-            [self.getStatus(x['from_user'],x['text'], x['id'], x['created_at'],None, None, "search") for x in results]
-	    note = osso.SystemNote(self.osso_c)
-
-	    result = note.system_note_infoprint("Search results Received")
-        except IOError, e:
-            msg = 'Error retrieving search results '
-	    if hasattr(e, 'reason'):
-		    msg = msg + str(e.reason)
-		    
-            if hasattr(e, 'code'):
-                if (e.code == 401):
-                    reason = "Not authorised: check uid/pwd"
-		elif(e.code == 503):
-		    reason = "Service unavailable"
-                else:
-                    reason = ""
-                msg = msg +'Server returned ' + str(e.code) + " : " + reason
+        #split the tweet text on any comma , 
+	
+	searchTerms = searchterm.split(",")
+	#call search on each of the terms in the search str
+	for term in searchTerms:
+		term = unicode(term).encode('utf-8')
+		#then we need to urlencode so that we can use twitter chars like @ without
+		#causing problems
+		search = urllib.urlencode({ 'q' : term })
 		
-	    note = osso.SystemNote(self.osso_c)
-	    note.system_note_dialog(msg, type='notice')
+		#Now for the main logic...fetching tweets
+		#at the moment I'm just using basic auth. 
+		#urllib2 provides all the HTTP handling stuff
+		auth_handler = urllib2.HTTPBasicAuthHandler()
+		#realm here is important. or at least it seemed to be
+		#this info is on the login box if you go to the url in a browser
+		auth_handler.add_password(realm='Twitter API',
+				  uri=self.searchServiceUrlRoot+'/search.json',
+				  user=self.username,
+				  passwd=self.password)
+		#we create an 'opener' object with our auth_handler
+		opener = urllib2.build_opener(auth_handler)
+		# ...and install it globally so it can be used with urlopen.
+		urllib2.install_opener(opener)
+		
+		try:
+		    json = urllib2.urlopen(self.searchServiceUrlRoot+'search.json?'+search)
+		    
+		    #JSON is awesome stuff. we get given a long string of json encoded information
+		    #which contains all the tweets, with lots of info, we decode to a json object
+		    data = simplejson.loads(json.read())
+		    #then this line does all the hard work. Basicaly for evey top level object in the JSON
+		    #structure we call out getStatus method with the contents of the USER structure
+		    #and the values of top level values text/id/created_at
+	  
+		    results = data['results']
+		    [self.getStatus(x['from_user'],x['text'], x['id'], x['created_at'],None, None, "search") for x in results]
+		    note = osso.SystemNote(self.osso_c)
+
+		    result = note.system_note_infoprint("Search results Received for : " + term)
+		except IOError, e:
+		    msg = 'Error retrieving search results '
+		    if hasattr(e, 'reason'):
+			    msg = msg + str(e.reason)
+			    
+		    if hasattr(e, 'code'):
+			if (e.code == 401):
+			    reason = "Not authorised: check uid/pwd"
+			elif(e.code == 503):
+			    reason = "Service unavailable"
+			else:
+			    reason = ""
+			msg = msg +'Server returned ' + str(e.code) + " : " + reason
+			
+		    note = osso.SystemNote(self.osso_c)
+		    note.system_note_dialog(msg, type='notice')
 
 
             
@@ -927,6 +944,13 @@ class Witter():
             self.searchliststore.append([ "@"+user,self.namecolour,"<span foreground=\"#0000FF\"><b>@"+user+"</b></span> : "+data+"\n<span size=\"xx-small\">posted on: "+created_at+"</span>",self.tweetcolour, id, type])
             
                 
+    def enterPressed(self,widget,*args):
+	    #in most views we want to call newTweet, but in search call the getSearch
+	    if (self.treeview.get_model() == self.searchliststore):
+		self.getSearch()
+	    else:
+		self.newTweet(self,widget,*args)
+	    
     def newTweet(self, widget, *args):
         #The other main need of a twitter client
         #the ability to post an update
@@ -1075,6 +1099,8 @@ class Witter():
         self.menuItemReplyTo = gtk.MenuItem("Reply To")
         urlmenu.append(self.menuItemReplyTo)
         self.menuItemReplyTo.show()
+	menuItemSeparator = gtk.SeparatorMenuItem()
+	urlmenu.append(menuItemSeparator)
         self.menuItemReTweet = gtk.MenuItem("ReTweet")
         urlmenu.append(self.menuItemReTweet)
 	self.menuItemReplyTo.connect("activate", self.replyTo)
@@ -1293,12 +1319,19 @@ class Witter():
                     self.searchServiceUrlRoot=self.identicaSearchUrlRoot
                     self.serviceName=self.identicaName
             except ConfigParser.NoSectionError:
-                print "no text colour setting"
+                print "no service setting"
 	    try:
-		    self.timelineRefresh = int(config.get("refresh_interval", "timeline"))
-		    self.mentionsRefresh = int(config.get("refresh_interval","mentions"))
-		    self.DMsRefresh = int(config.get("refresh_interval","dm"))
-		    self.publicRefresh = int(config.get("refresh_interval","public"))
+		    self.timelineRefreshInterval = int(config.get("refresh_interval", "timeline"))
+		    self.mentionsRefreshInterval = int(config.get("refresh_interval","mentions"))
+		    self.DMsRefreshInterval = int(config.get("refresh_interval","dm"))
+		    self.publicRefreshInterval = int(config.get("refresh_interval","public"))
+		    self.searchRefreshInterval = int(config.get("refresh_interval","search"))
+	    except ConfigParser.NoSectionError:
+		print "No refresh_interval section"
+	    except ConfigParser.NoOptionError:
+		print "unknown option"
+	    try:
+		    self.search_terms = config.get("search","search_terms")
 	    except ConfigParser.NoSectionError:
 		print "No refresh_interval section"
 		
@@ -1322,24 +1355,30 @@ class Witter():
             self.window.set_title("Witter - now using twitter")         
     
     def writeConfig(self):
-        f = open('/home/user/.witter','w')
-        f.write("[credentials]\n")
-        f.write("username = "+base64.b64encode(self.username)+"\n")
-        f.write("password = "+base64.b64encode(self.password)+"\n")    
-        f.write("[UI]\n")
-        f.write("textcolour = "+self.textcolour+"\n")
-	f.write("[refresh_interval]\n")
-	f.write("timeline="+str(self.timelineRefresh)+"\n")
-	f.write("mentions="+str(self.mentionsRefresh)+"\n")
-	f.write("dm="+str(self.DMsRefresh)+"\n")
-	f.write("public="+str(self.publicRefresh)+"\n")
-	
+	try:
+		f = open('/home/user/.witter','w')
+		f.write("[credentials]\n")
+		f.write("username = "+base64.b64encode(self.username)+"\n")
+		f.write("password = "+base64.b64encode(self.password)+"\n")    
+		f.write("[UI]\n")
+		f.write("textcolour = "+self.textcolour+"\n")
+		f.write("[refresh_interval]\n")
+		f.write("timeline="+str(self.timelineRefreshInterval)+"\n")
+		f.write("mentions="+str(self.mentionsRefreshInterval)+"\n")
+		f.write("dm="+str(self.DMsRefreshInterval)+"\n")
+		f.write("public="+str(self.publicRefreshInterval)+"\n")
+		f.write("search="+str(self.searchRefreshInterval)+"\n")
+		f.write("[search]\n")
+		f.write("search_terms="+self.search_terms+"\n")
+	except IOError, e:
+		print "failed to write config file"
+		
     def promptForCredentials(self, *args):
         #dialog = self.wTree.get_widget("CredentialsDialog")
         dialog = self.builder.get_object("CredentialsDialog")
         dialog.set_title("Twitter Credentials")
         dialog.connect("response", self.gtk_widget_hide)
-        dialog.show()
+        dialog.show_all()
         
     def  store_creds(self, widget, *args):
         print "store_creds called"
@@ -1350,12 +1389,17 @@ class Witter():
         self.writeConfig()
 
     def  gtk_widget_hide(self, widget, *args):
-        widget.hide()
-        
+        widget.hide_all()
+        #widget.destroy()
+	
     def reparent_loc(self, widget, newParent):
         widget.reparent(newParent)
         
     def switchViewTo(self, widget, type ):
+	if (self.treeview.get_model() == self.searchliststore):
+	    #switching out of search view, save search terms and reset text box
+	    self.search_terms = self.tweetText.get_text()
+	    self.tweetText.set_text("")
         if (re.search("timeline",type)):
             self.treeview.set_model(self.liststore)
             self.window.set_title(self.serviceName +" - timeline")
@@ -1375,6 +1419,7 @@ class Witter():
             self.treeview.set_model(self.friendsliststore)
             self.window.set_title(self.serviceName +" - friends")
         elif (re.search("search", type)):
+	    self.tweetText.set_text(self.search_terms)
             self.treeview.set_model(self.searchliststore)  
             self.window.set_title(self.serviceName +" - search")  
             
@@ -1525,7 +1570,7 @@ class Witter():
 		dlg.set_version("0.1.1")
 		dlg.set_name("Witter")
 		dlg.set_authors(["Daniel Would"])
-		dlg.set_website("Homepage : http://danielwould.wordpress.com/witter/\nBugtracker : http://garage.maemo.org/witter")
+		dlg.set_website("Homepage : http://danielwould.wordpress.com/witter/\nBugtracker : http://garage.maemo.org/projects/witter")
 		def close(w, res):
 			if res == gtk.RESPONSE_CANCEL:
 				w.hide()
@@ -1534,57 +1579,72 @@ class Witter():
 	
     def configProperties(self, widget, *args):
 	    #dialog = self.wTree.get_widget("CredentialsDialog")
-	    dialog = self.builder.get_object("setRefreshDialog")
-            dialog.set_title("Witter Properties")
-            dialog.connect("response", self.gtk_widget_hide)
-	    self.timelineNumberEd = self.builder.get_object("timeline-NumberEditor")
-	    self.timelineNumberEd.set_value(self.timelineRefresh)
-	    self.mentionsNumberEd = self.builder.get_object("mentions-NumberEditor")
-	    self.mentionsNumberEd.set_value(self.mentionsRefresh)
-	    self.DMNumberEd = self.builder.get_object("DM-NumberEditor")
-	    self.DMNumberEd.set_value(self.DMsRefresh)
-	    self.publicNumberEd = self.builder.get_object("public-NumberEditor")
-	    self.publicNumberEd.set_value(self.publicRefresh)
-	
-            dialog.show()
+	    if (self.configDialog == None):
+		self.configDialog = self.builder.get_object("setRefreshDialog")
+		self.configDialog.set_title("Witter Properties")
+		self.configDialog.connect("response", self.dontsetProps)
+	    
+		self.timelineNumberEd = self.builder.get_object("timeline-NumberEditor")
+		self.mentionsNumberEd = self.builder.get_object("mentions-NumberEditor")
+		self.DMNumberEd = self.builder.get_object("DM-NumberEditor")
+		self.publicNumberEd = self.builder.get_object("public-NumberEditor")
+		self.searchNumberEd = self.builder.get_object("search-NumberEditor")
+	    
+	    self.timelineNumberEd.set_value(self.timelineRefreshInterval)
+	    self.mentionsNumberEd.set_value(self.mentionsRefreshInterval)
+	    self.DMNumberEd.set_value(self.DMsRefreshInterval)
+	    self.publicNumberEd.set_value(self.publicRefreshInterval)
+	    self.searchNumberEd.set_value(self.searchRefreshInterval)
+            self.configDialog.show_all()
 
+    def dontsetProps(self,widget, *args):
+	    print "cancelledOperation"
+	    self.configDialog.hide_all()
+	    
     def setProps(self, widget, *args):
 	    #set all the refresh inteval values
-	    self.timelineRefresh = self.timelineNumberEd.get_value()
-	    self.mentionsRefresh = self.mentionsNumberEd.get_value()
-	    self.DMsRefresh = self.DMNumberEd.get_value()
-	    self.publicRefresh = self.publicNumberEd.get_value()
+	    self.timelineRefreshInterval = self.timelineNumberEd.get_value()
+	    self.mentionsRefreshInterval = self.mentionsNumberEd.get_value()
+	    self.DMsRefreshInterval = self.DMNumberEd.get_value()
+	    self.publicRefreshInterval = self.publicNumberEd.get_value()
+	    self.searchRefreshInterval = self.searchNumberEd.get_value()
 	    #stop and start the threads to pick up the new values
 	    self.end_refresh_threads()
 	    self.start_refresh_threads()
+	    self.configDialog.hide_all()
 	    
     def end_refresh_threads(self):
 	    #end all the refresh threads
 	    if (self.refreshtask != None):
 		self.refreshtask.stop()
-	    if (self.dmresfresh != None):
+	    if (self.dmrefresh != None):
 		self.dmrefresh.stop()
 	    if (self.mentionrefresh != None):
 		self.mentionrefresh.stop()
 	    if (self.publicrefresh != None):
 		self.publicrefresh.stop()
+	    if (self.searchrefresh != None):
+		self.searchrefresh.stop()
 	
 
     def start_refresh_threads(self):
 	    #we store the refresh interval in minutes, but pass it through as a value in seconds
 	    #this method launches a thread for each of the views we want to have auto-refreshed
-	    if (self.timelineRefresh != 0):
+	    if (self.timelineRefreshInterval != 0):
 		    self.refreshtask = witter.RefreshTask(self.getTweetsWrapper, self.showBusy)
-		    self.refreshtask.start(self.timelineRefresh*60, self)
-	    if (self.DMsRefresh != 0):
+		    self.refreshtask.start(self.timelineRefreshInterval*60, self)
+	    if (self.DMsRefreshInterval != 0):
 		    self.dmrefresh = witter.RefreshTask(self.getDMsWrapper, self.showBusy)
-		    self.dmrefresh.start(self.DMsRefresh*60, self)
-	    if (self.mentionsRefresh != 0):
+		    self.dmrefresh.start(self.DMsRefreshInterval*60, self)
+	    if (self.mentionsRefreshInterval != 0):
 		    self.mentionrefresh = witter.RefreshTask(self.getMentionsWrapper, self.showBusy)
-		    self.mentionrefresh.start(self.mentionsRefresh*60, self)
-	    if (self.publicRefresh != 0) :
+		    self.mentionrefresh.start(self.mentionsRefreshInterval*60, self)
+	    if (self.publicRefreshInterval != 0) :
 		    self.publicrefresh = witter.RefreshTask(self.getPublicWrapper, self.showBusy)
-		    self.publicrefresh.start(self.publicRefresh*60, self)
+		    self.publicrefresh.start(self.publicRefreshInterval*60, self)
+	    if (self.searchRefreshInterval != 0) :
+		    self.searchrefresh = witter.RefreshTask(self.getSearchWrapper, self.showBusy)
+		    self.searchrefresh.start(self.searchRefreshInterval*60, self)
 	    print "end refresh setup"
 	    
     def getTweetsWrapper(self, *args):
@@ -1615,7 +1675,13 @@ class Witter():
 	    #if (self.gettingTweets == False):
 	    self.getPublic(auto=1)
 	    return "done"
+		
+    def getSearchWrapper(self, *args):
 	    
+	    self.getSearch(auto=1)
+	    
+	    return "done"
+
     def showBusy(self, *args):
 	    print "running"
 	    return "still running"
