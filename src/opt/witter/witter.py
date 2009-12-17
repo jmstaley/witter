@@ -1,4 +1,5 @@
 #!/usr/bin/env python2.5
+# coding= utf-8
 # 
 # Copyright (c) 2009 Daniel Would
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -82,7 +83,7 @@ class Witter():
         self.program = hildon.Program()
         self.program.__init__()
 
-        self.osso_c = osso.Context("witter","0.1.1", False) 
+        self.osso_c = osso.Context("witter","0.2.0", False) 
         # set name of application: this shows in titlebar
         gtk.set_application_name("Witter")
         self.twitterUrlRoot = "http://twitter.com/"
@@ -99,6 +100,7 @@ class Witter():
         self.reply_to_name=None
 	self.retweetname=None
 	self.retweetid=None
+	self.retweettext=None
         #Set the Glade file
        # self.gladefile = "/usr/share/witter/witter.glade"  
         #self.wTree = gtk.glade.XML(self.gladefile) 
@@ -199,15 +201,15 @@ class Witter():
         
         #self.urlmenu = gtk.Menu()
         # define a liststore we use this to store our tweets and some associated data
-        # the fields are : Name,nameColour,Tweet+Timestamp,TweetColour,id, type
-        self.liststore = gtk.ListStore(str, str, str, str, str, str)
+        # the fields are : Name,nameColour,Tweet,TweetColour,id, type, timestamp, replyTo
+        self.liststore = gtk.ListStore(str, str, str, str, str, str,str,str)
         #then we want the same again to store dm's, mentions & pubilc timeline separately
-        self.dmliststore = gtk.ListStore(str, str, str, str, str, str)
-        self.mentionliststore = gtk.ListStore(str, str, str, str, str, str)
-        self.publicliststore= gtk.ListStore(str, str, str, str, str, str)
-        self.trendliststore= gtk.ListStore(str, str, str, str)
-        self.friendsliststore = gtk.ListStore(str,str,str,str,str,str)
-        self.searchliststore = gtk.ListStore(str,str,str,str,str,str)
+        self.dmliststore = gtk.ListStore(str, str, str, str, str, str,str,str)
+        self.mentionliststore = gtk.ListStore(str, str, str, str, str, str,str,str)
+        self.publicliststore= gtk.ListStore(str, str, str, str, str, str,str,str)
+        self.trendliststore= gtk.ListStore(str, str, str, str,str,str,str,str)
+        self.friendsliststore = gtk.ListStore(str,str,str,str,str,str,str,str)
+        self.searchliststore = gtk.ListStore(str,str,str,str,str,str,str,str)
         #we want auto-complete of @references 
         #self.tweetText = self.wTree.get_widget("TweetText")
         self.tweetText = self.builder.get_object("TweetText")
@@ -227,9 +229,10 @@ class Witter():
         # create the TreeViewColumn to display the data, I decided on two colums
         # one for name and the other for the tweet
         #self.tvcname = gtk.TreeViewColumn('Name')
-        #cell = witter.witter_cell_renderer.witterCellRender()
-	cell = gtk.CellRendererText()
+        cell = witter.witter_cell_renderer.witterCellRender()
+	#cell = gtk.CellRendererText()
         cell.set_property('background',"#6495ED")
+	cell.set_property('font_size',18)
 	
 	self.tvctweet = gtk.TreeViewColumn('Pango Markup', cell, markup=2)
 
@@ -252,12 +255,14 @@ class Witter():
         # next we add a mapping to the tweet column, again the third field
         # in our list store is the tweet text
         self.tvctweet.add_attribute(cell, 'text',2)
+	self.tvctweet.add_attribute(cell, 'timestamp',6)
+	self.tvctweet.add_attribute(cell, 'replyto',7)
         # and the fourth is the colour of the tweet text 
         #self.tvctweet.add_attribute(cell, 'foreground', 3)
         # we start up non-fullscreen, and we want the tweets to appear without
         # scrolling left-right (well I wanted that) so I set a wrap width for
         # the text being rendered
-        cell.set_property('wrap-width', self.defaultwidth)
+        #cell.set_property('wrap-width', self.defaultwidth)
         # make it searchable (I found this in an example and thought I might use it
         # but currently I make no use of this setting
         self.treeview.set_search_column(2)
@@ -749,9 +754,9 @@ class Witter():
 			else:
 			    reason = ""
 			msg = msg +'Server returned ' + str(e.code) + " : " + reason
-			
-		    note = osso.SystemNote(self.osso_c)
-		    note.system_note_dialog(msg, type='notice')
+		    if (auto ==0):
+			    note = osso.SystemNote(self.osso_c)
+			    note.system_note_dialog(msg, type='notice')
 
 
             
@@ -807,7 +812,7 @@ class Witter():
             
     def getTrend(self, name, url):
         
-        self.trendliststore.append([name, self.namecolour,"<span foreground=\"blue\">"+name+"</span> :"+url,self.tweetcolour])
+        self.trendliststore.append([name, self.namecolour,name+" :"+url,self.tweetcolour,None,None])
         
         
     def getFriends(self, *args):
@@ -879,12 +884,12 @@ class Witter():
             if (None != in_reply_to_id):
                 print "reply to "+in_reply_to_screen_name
                 #we don't want anything showing up if there is no reply_to, so all teh formatting is held here including the newline
-                reply_to = "\n<span size=\"xx-small\">In reply to: "+in_reply_to_screen_name+" - " + self.get_specific_tweet(in_reply_to_screen_name, in_reply_to_id)+"</span>"
+                reply_to = "In reply to: "+in_reply_to_screen_name+" - " + self.get_specific_tweet(in_reply_to_screen_name, in_reply_to_id)
             else:
                 reply_to=""
             data = data.replace("&","&amp;")
             reply_to = reply_to.replace("&","&amp;")
-            self.liststore.append([ "@"+user['screen_name'],self.namecolour,"<span foreground=\"#0000FF\"><b>@"+user['screen_name']+"</b></span> : "+data+"\n<span size=\"xx-small\">posted on: "+created_at+"</span>"+reply_to,self.tweetcolour, id, type])
+            self.liststore.append([ "@"+user['screen_name'],self.namecolour,"@"+user['screen_name']+" : "+data,self.tweetcolour, id, type, created_at,reply_to])
             #now we process the id, this is so we can do a refresh with just the posts since the latest one we have
             #if we haven't stored the most recent id then store this one
             if self.last_id == None:
@@ -894,8 +899,9 @@ class Witter():
                 if long(self.last_id) < long(id):
                     self.last_id=id
         elif (re.search("dm", type)):
+	    reply_to=""
             data = data.replace("&","&amp;")
-            self.dmliststore.append([ "@"+user['screen_name'],self.namecolour,"<span foreground=\"#0000FF\"><b>@"+user['screen_name']+"</b></span> : "+data+"\n<span size=\"xx-small\">posted on: "+created_at+"</span>",self.tweetcolour, id, type])
+            self.dmliststore.append([ "@"+user['screen_name'],self.namecolour,"@"+user['screen_name']+" : "+data,self.tweetcolour, id, type, created_at,reply_to])
             if self.last_dm_id == None:
                 self.last_dm_id=id
             else:
@@ -906,12 +912,12 @@ class Witter():
             if (None != in_reply_to_id):
                 print "reply to "+in_reply_to_screen_name
                 #we don't want anything showing up if there is no reply_to, so all teh formatting is held here including the newline
-                reply_to = "\n<span size=\"xx-small\">In reply to: "+in_reply_to_screen_name+" - " + self.get_specific_tweet(in_reply_to_screen_name, in_reply_to_id)+"</span>"
+                reply_to = "In reply to: "+in_reply_to_screen_name+" - " + self.get_specific_tweet(in_reply_to_screen_name, in_reply_to_id)
             else:
                 reply_to=""
             data = data.replace("&","&amp;")
             reply_to = reply_to.replace("&","&amp;")
-            self.mentionliststore.append([ "@"+user['screen_name'],self.namecolour,"<span foreground=\"#0000FF\"><b>@"+user['screen_name']+"</b></span> : "+data+"\n<span size=\"xx-small\">posted on: "+created_at+"</span>"+reply_to,self.tweetcolour, id, type])
+            self.mentionliststore.append([ "@"+user['screen_name'],self.namecolour,"@"+user['screen_name']+" : "+data,self.tweetcolour, id, type, created_at,reply_to])
             if self.last_mention_id == None:
                 self.last_mention_id=id
             else:
@@ -922,12 +928,12 @@ class Witter():
             if (None != in_reply_to_id):
                 print "reply to "+in_reply_to_screen_name
                 #we don't want anything showing up if there is no reply_to, so all teh formatting is held here including the newline
-                reply_to = "\n<span size=\"xx-small\">In reply to: "+in_reply_to_screen_name+" - " + self.get_specific_tweet(in_reply_to_screen_name, in_reply_to_id)+"</span>"
+                reply_to = "In reply to: "+in_reply_to_screen_name+" - " + self.get_specific_tweet(in_reply_to_screen_name, in_reply_to_id)
             else:
                 reply_to=""
             data = data.replace("&","&amp;")
             reply_to = reply_to.replace("&","&amp;")
-            self.publicliststore.append([ "@"+user['screen_name'],self.namecolour,"<span foreground=\"#0000FF\"><b>@"+user['screen_name']+"</b></span> : "+data+"\n<span size=\"xx-small\">posted on: "+created_at+"</span>"+reply_to,self.tweetcolour, id, type])
+            self.publicliststore.append([ "@"+user['screen_name'],self.namecolour,"@"+user['screen_name']+" : "+data,self.tweetcolour, id, type, created_at,reply_to])
             if self.last_public_id == None:
                 self.last_public_id=id
             else:
@@ -935,13 +941,14 @@ class Witter():
                 if long(self.last_public_id) < long(id):
                     self.last_public_id=id
         elif (re.search("friend", type)):
+	    reply_to=""
             text_data = data['text'].replace("&","&amp;")
-            self.friendsliststore.append([ "@"+user,self.namecolour,"<span foreground=\"#0000FF\"><b>@"+user+"</b></span> : "+text_data+"\n<span size=\"xx-small\">posted on: "+data['created_at']+"</span>",self.tweetcolour, id, type])
+            self.friendsliststore.append([ "@"+user,self.namecolour,"@"+user+" : "+text_data,self.tweetcolour, id, type, created_at,reply_to])
         elif (re.search("search", type)):
-            
+            reply_to=""
             data = data.replace("&","&amp;")
             
-            self.searchliststore.append([ "@"+user,self.namecolour,"<span foreground=\"#0000FF\"><b>@"+user+"</b></span> : "+data+"\n<span size=\"xx-small\">posted on: "+created_at+"</span>",self.tweetcolour, id, type])
+            self.searchliststore.append([ "@"+user,self.namecolour,"@"+user+" : "+data,self.tweetcolour, id, type, created_at,reply_to])
             
                 
     def enterPressed(self,widget,*args):
@@ -1155,6 +1162,7 @@ class Witter():
                 self.menuItemUserAction.set_submenu(menuUserAct)
 		self.reply_to = id
 		self.reply_to_name= name
+		self.retweettext = entry
                 self.retweetname = name
 		self.retweetid = id
 		
@@ -1225,50 +1233,52 @@ class Witter():
         print "reply to : " + self.reply_to_name + " message_id " + self.reply_to
         self.tweetText.set_text(self.reply_to_name)
         
-    
-    def reTweet(self, widget,  *args):
-        print "reTweet : " + self.retweetname + " message_id " +self.retweetid
-        
-	post = urllib.urlencode({ })
-        #build the request with the url and our post data
-        req = urllib2.Request('http://api.twitter.com/1/statuses/retweet/'+str(self.retweetid)+'L.json', post)
+    def reTweet(self,widget,*args):
+	    self.tweetText.set_text("RT:" + self.retweettext)
+  
+  #      print "reTweet : " + self.retweetname + " message_id " +self.retweetid
+    #    #
+#	post = urllib.urlencode({ })
+   #     #build the request with the url and our post data
+   #     req = urllib2.Request('http://api.twitter.com/1/statuses/retweet/'+str(self.retweetid)+'L.json', post)
         #setup the auth stuff
-        auth_handler = urllib2.HTTPBasicAuthHandler()
-        auth_handler.add_password(realm='Twitter API',
-                              uri='http://api.twitter.com/1/statuses/retweet/'+str(self.retweetid)+'L.json',
-                              user=self.username,
-                              passwd=self.password)
-        opener = urllib2.build_opener(auth_handler)
+ #       auth_handler = urllib2.HTTPBasicAuthHandler()
+  #      auth_handler.add_password(realm='Twitter API',
+   #                           uri='http://api.twitter.com/1/statuses/retweet/'+str(self.retweetid)+'L.json',
+     #                         user=self.username,
+       #                       passwd=self.password)
+    #    opener = urllib2.build_opener(auth_handler)
         # ...and install it globally so it can be used with urlopen.
-	try:
-		urllib2.install_opener(opener)
-		json = urllib2.urlopen(req)
-		hildon.hildon_banner_show_information(self.window,"","ReTweet Successful")
-	except IOError, e:
-	    msg = 'Error posting tweet '
-	    if hasattr(e, 'reason'):
-		    msg = msg + str(e.reason)
-		    
-            if hasattr(e, 'code'):
-                if (e.code == 401):
-                    reason = "Not authorised: check uid/pwd"
-		elif(e.code == 503):
-		    reason = "Service unavailable"
-                else:
-                    reason = ""
-                msg = msg +'Server returned ' + str(e.code) + " : " + reason
+#	try:
+#		urllib2.install_opener(opener)
+#		json = urllib2.urlopen(req)
+#		hildon.hildon_banner_show_information(self.window,"","ReTweet Successful")
+#	except IOError, e:
+#	    msg = 'Error posting tweet '
+#	    if hasattr(e, 'reason'):
+#		    msg = msg + str(e.reason)
+#		    
+   #         if hasattr(e, 'code'):
+      #          if (e.code == 401):
+         #           reason = "Not authorised: check uid/pwd"
+	#	elif(e.code == 503):
+	#	    reason = "Service unavailable"
+           #     else:
+              #      reason = ""
+                #msg = msg +'Server returned ' + str(e.code) + " : " + reason
 		
-	    note = hildon.hildon_note_new_information(self.window, msg)
-            note.run()
-	    note.destroy()
+#	    note = hildon.hildon_note_new_information(self.window, msg)
+   #         note.run()
+	#    note.destroy()
 	
     def openBrowser(self, widget, url, *args):      
         #open a url in a browser
-        context = osso.Context("Witter", "1.0",False)
         if (self.maemo_ver==5):
+	    print "opening browser - maemo5 style"
             webbrowser.open_new(url)
         else:
-            webbrowser.open(url, context=context)
+	    print "opening browser - maemo4 style"
+            webbrowser.open(url, context=self.osso_c)
         print "We tried to open a browser"
         
     def checkVersion(self):
@@ -1462,62 +1472,7 @@ class Witter():
 
 
         
-    def flipTextColour(self, *args):
-        #until I figure out how to obey theme colours, let the user
-        #flip the colours in use.
-        if (re.search("#000000", self.textcolour)):
-            self.textcolour = "#FFFFFF"
-            
-        else:
-            self.textcolour = "#000000"
-        #reset all the values in the current list stores
-        item = self.liststore.get_iter_first ()
-
-        while ( item != None ):
-            self.liststore.set_value(item,1,self.textcolour)
-            self.liststore.set_value(item,3,self.textcolour)
-            item = self.liststore.iter_next(item)
-        
-        item = self.dmliststore.get_iter_first ()
-
-        while ( item != None ):
-            self.dmliststore.set_value(item,1,self.textcolour)
-            self.dmliststore.set_value(item,3,self.textcolour)
-            item = self.dmliststore.iter_next(item)
-        item = self.friendsliststore.get_iter_first ()
-
-        while ( item != None ):
-            self.friendsliststore.set_value(item,1,self.textcolour)
-            self.friendsliststore.set_value(item,3,self.textcolour)
-            item = self.friendsliststore.iter_next(item)
-        
-        item = self.mentionliststore.get_iter_first ()
-
-        while ( item != None ):
-            self.mentionliststore.set_value(item,1,self.textcolour)
-            self.mentionliststore.set_value(item,3,self.textcolour)
-            item = self.mentionliststore.iter_next(item)
-        item = self.publicliststore.get_iter_first ()
-
-        while ( item != None ):
-            self.publicliststore.set_value(item,1,self.textcolour)
-            self.publicliststore.set_value(item,3,self.textcolour)
-            item = self.publicliststore.iter_next(item)
-        
-        item = self.searchliststore.get_iter_first ()
-
-        while ( item != None ):
-            self.searchliststore.set_value(item,1,self.textcolour)
-            self.searchliststore.set_value(item,3,self.textcolour)
-            item = self.searchliststore.iter_next(item)
-            
-        item = self.trendliststore.get_iter_first ()
-
-        while ( item != None ):
-            self.trendliststore.set_value(item,1,self.textcolour)
-            self.trendliststore.set_value(item,3,self.textcolour)
-            item = self.trendliststore.iter_next(item)
-      
+       
     def twitPic(self, widget, *args):
         print "twitPic"
         #dialog = self.wTree.get_widget("filechooserdialog1")
@@ -1569,7 +1524,8 @@ class Witter():
 		dlg = gtk.AboutDialog()
 		dlg.set_version("0.1.1")
 		dlg.set_name("Witter")
-		dlg.set_authors(["Daniel Would"])
+		#"Marcus Wikström (logo)"
+		dlg.set_authors(["Daniel Would (programmer)", "@mece66 (logo)"])
 		dlg.set_website("Homepage : http://danielwould.wordpress.com/witter/\nBugtracker : http://garage.maemo.org/projects/witter")
 		def close(w, res):
 			if res == gtk.RESPONSE_CANCEL:
