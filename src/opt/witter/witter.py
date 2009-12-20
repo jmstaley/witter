@@ -976,11 +976,11 @@ class Witter():
             
                 
     def enterPressed(self,widget,*args):
-	    #in most views we want to call newTweet, but in search call the getSearch
+	    self.newTweet(self,widget,*args)
+	    #if we were in the search view, we want to restore the search terms after a tweet
 	    if (self.treeview.get_model() == self.searchliststore):
-		self.getSearch()
-	    else:
-		self.newTweet(self,widget,*args)
+		self.tweetText.set_text(self.search_terms)
+	    
 	    
     def newTweet(self, widget, *args):
         #The other main need of a twitter client
@@ -1117,7 +1117,8 @@ class Witter():
                 
     def build_right_click_menu(self, *args):
         #build the layout for the right click menu
-        urlmenu = gtk.Menu()
+        urlmenu = hildon.gtk_menu_new()
+
         urlmenu.set_title("hildon-context-sensitive-menu")
         self.menuItemURL = gtk.MenuItem("URL actions")
         
@@ -1256,7 +1257,10 @@ class Witter():
         print data
     
     def replyTo(self, widget, *args):
-        print "reply to : " + self.reply_to_name + " message_id " + self.reply_to
+	if (self.treeview.get_model() == self.searchliststore):
+		#we want to store the search terms, replace them with tweet text
+		#so we can restore the search terms afterwards
+		self.search_terms = self.tweetText.get_text()
         self.tweetText.set_text(self.reply_to_name + " ")
 	self.tweetText.grab_focus()
 	self.tweetText.set_position(len(self.reply_to_name)+1);
