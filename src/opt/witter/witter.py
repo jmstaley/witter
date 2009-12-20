@@ -86,8 +86,8 @@ class Witter():
         self.osso_c = osso.Context("witter","0.2.0", False) 
         # set name of application: this shows in titlebar
         gtk.set_application_name("Witter")
-        self.twitterUrlRoot = "http://twitter.com/"
-        self.twitterSearchUrlRoot = "http://search.twitter.com/"
+        self.twitterUrlRoot = "https://twitter.com/"
+        self.twitterSearchUrlRoot = "https://search.twitter.com/"
         self.twitterName = "Witter"
         self.identicaUrlRoot = "http://identi.ca/api/"
         self.identicaSearchUrlRoot = "http://identi.ca/api/"
@@ -1117,8 +1117,7 @@ class Witter():
                 
     def build_right_click_menu(self, *args):
         #build the layout for the right click menu
-        urlmenu = hildon.gtk_menu_new()
-
+        urlmenu = gtk.Menu()
         urlmenu.set_title("hildon-context-sensitive-menu")
         self.menuItemURL = gtk.MenuItem("URL actions")
         
