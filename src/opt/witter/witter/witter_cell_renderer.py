@@ -1,6 +1,7 @@
 
 import gtk
 import pango
+import pangocairo
 import cairo
 import gobject
 
@@ -71,7 +72,7 @@ class witterCellRender(gtk.GenericCellRenderer):
 
 	def on_render(self, window, widget, background_area, cell_area, expose_area, flags):
 		#get a cairo context object
-		cairo_context = window.cairo_create()
+		cairo_context  =window.cairo_create()
 		
 		x= cell_area.x
 		y = cell_area.y
@@ -82,7 +83,7 @@ class witterCellRender(gtk.GenericCellRenderer):
 		self.render_rect(cairo_context, x, y, widget.allocation.width - 8, h)
 		
 		pat = cairo.LinearGradient(x, y, x, y + h)
-		color = gtk.gdk.color_parse("#6495ED")
+		color = gtk.gdk.color_parse("#6bd3ff")
 		pat.add_color_stop_rgba(
 							0.0,
 							self.get_cairo_color(color.red),
@@ -90,15 +91,8 @@ class witterCellRender(gtk.GenericCellRenderer):
 							self.get_cairo_color(color.blue),
 							1
 							)
-		color = gtk.gdk.color_parse("#5F9EA0")
-		pat.add_color_stop_rgba(
-							0.5,
-							self.get_cairo_color(color.red),
-							self.get_cairo_color(color.green),
-							self.get_cairo_color(color.blue),
-							1
-							)
-		color = gtk.gdk.color_parse("#6495ED")
+		
+		color = gtk.gdk.color_parse("#0075b5")
 		pat.add_color_stop_rgb(
 							1.0,
 							self.get_cairo_color(color.red),
@@ -110,19 +104,19 @@ class witterCellRender(gtk.GenericCellRenderer):
 		cairo_context.set_source(pat)
 		cairo_context.fill()
 
-		
+				
 		#we want to calculate the actual height to render the backing so we need the space required
 		#to render the string using the specified font and font size
 		cairo_context.set_source_rgba(1, 1, 1, 1)
-		cairo_context.select_font_face("Georgia",
-                cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+		cairo_context.select_font_face("Georgia", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
 		cairo_context.set_font_size(self.get_property('font_size'))
+		#layout = cairo_context.create_layout()
+		#layout.set_font_drescription (pango.FontDescription ("Sans 18px"))
 		
-		x_bearing, y_bearing, width, height = cairo_context.text_extents(self.get_property('text'))[:4]
-		
-		
-		#get the text
-		tweet = self.get_property('text')
+		#get the text as a unicode string
+		tweet = unicode(self.get_property('text'))
+		x_bearing, y_bearing, width, height = cairo_context.text_extents(tweet)[:4]
+				
 		
 		seg_len = self.get_seg_len_for_font_size(cairo_context,self.get_property('font_size'),(w-20))
 		words = tweet.split(" ")
@@ -131,7 +125,11 @@ class witterCellRender(gtk.GenericCellRenderer):
 		#set the starting position for text display
 		cairo_context.move_to(x+10, ((y+height)))
 		for word in words:
-			
+			#unescape things to look nice
+			word = word.replace("&amp;","&")
+			word = word.replace("&lt;","<")
+			word = word.replace("&gt;",">")
+			word = word.replace("&quot;","\"")
 			if ((len(line) + len(word) + 1) > seg_len):
 				#set the position for the line of text, we start in the top quarter then drop in text heigh increments
 				cairo_context.move_to(x+10, ((y+height) + ((linecount+1)*height) +2))
@@ -147,11 +145,13 @@ class witterCellRender(gtk.GenericCellRenderer):
 				cairo_context.set_source_rgba(0, 1, 1, 1)
 			else:
 				cairo_context.set_source_rgba(1, 1, 1, 1)
-			word = word.replace("&amp;","&")
-			word = word.replace("&lt;","<")
-			word = word.replace("&gt;",">")
-			cairo_context.show_text(word + " ")
 			
+			cairo_context.show_text(unicode(word) + " ")
+			
+			#layout.set_text(unicode(line))
+			#layouts start again from begining not where you left off with last word
+			#cairo_context.show_layout(layout)
+			#cairo_context.move_to((x+10)+(len(line)*(self.get_property('font_size')/2)) ,((y+height) + ((linecount)*height) +2))
 		if (self.get_property('replyto') != ""):
 			#process any retweet text
 			
@@ -161,7 +161,7 @@ class witterCellRender(gtk.GenericCellRenderer):
 			x_bearing, y_bearing, width, height = cairo_context.text_extents(self.get_property('replyto'))[:4]
 			cairo_context.move_to(x+10, ((y+height) + ((linecount+1)*height) +self.get_property('font_size') -5))
 			seg_len = self.get_seg_len_for_font_size(cairo_context,self.get_property('font_size')-5,(w-20))
-			retweet = self.get_property('replyto')
+			retweet = unicode(self.get_property('replyto'))
 			retweetwords = retweet.split(" ")
 			for word in retweetwords:
 			
@@ -183,6 +183,7 @@ class witterCellRender(gtk.GenericCellRenderer):
 				word = word.replace("&amp;","&")
 				word = word.replace("&lt;","<")
 				word = word.replace("&gt;",">")
+				word = word.replace("&quot;","\"")
 				cairo_context.show_text(word + " ")
 				
 			

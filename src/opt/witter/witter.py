@@ -96,13 +96,13 @@ class Witter():
         self.searchServiceUrlRoot = self.twitterSearchUrlRoot
         self.serviceName = self.twitterName
 	 #used to store the id of message if we're going to do a reply_to
-        self.reply_to=None
-        self.reply_to_name=None
-	self.retweetname=None
-	self.retweetid=None
-	self.retweettext=None
+        self.reply_to=""
+        self.reply_to_name=""
+	self.retweetname=""
+	self.retweetid=""
+	self.retweettext=""
         #Set the Glade file
-       # self.gladefile = "/usr/share/witter/witter.glade"  
+        #self.gladefile = "/usr/share/witter/witter.glade"  
         #self.wTree = gtk.glade.XML(self.gladefile) 
         self.builder = gtk.Builder()
         self.builder.add_from_file("/usr/share/witter/witter.ui") 
@@ -284,10 +284,12 @@ class Witter():
         self.treeview.set_reorderable(False)
         #with all that done I add the treeview to the scrolled window
         pannedWindow.add_with_viewport(self.treeview)
+	pannedWindow.connect('horizontal-movement', self.gesture)
+	pannedWindow.connect('vertical-movement', self.scrolling)
         #self.treeview.connect("button-press-event", self.build_menu, None);
         selection = self.treeview.get_selection()
         selection.connect('changed', self.build_menu)
-
+	
         # self.treeview.connect("changed", self.build_menu, None);
         self.treeview.tap_and_hold_setup(self.urlmenu, callback=gtk.tap_and_hold_menu_position_top)
 	#init the configDialog
@@ -388,7 +390,7 @@ class Witter():
         menu.append(Public)
         
         Creds = hildon.GtkButton(gtk.HILDON_SIZE_AUTO)
-        Creds.set_label("Set UID/PWD")
+        Creds.set_label("Authentication setup")
         # Attach callback to clicked signal
         Creds.connect("clicked", self.promptForCredentials)
         Creds.show()
@@ -402,7 +404,7 @@ class Witter():
         menu.append(Service)
 	
 	Properties= hildon.GtkButton(gtk.HILDON_SIZE_AUTO)
-        Properties.set_label("Properties")
+        Properties.set_label("Preferences")
         # Attach callback to clicked signal
         Properties.connect("clicked", self.configProperties)
         Properties.show()
@@ -462,8 +464,13 @@ class Witter():
             self.getFriends()
         elif (self.treeview.get_model() == self.searchliststore):
             self.getSearch()
+	
+	self.builder.get_object("hbox1").hide_all()
+	self.builder.get_object("hbox2").hide_all()
+	
             
     def getTweets(self, auto=0, *args):
+	
 	self.gettingTweets = True
         print "getting tweets"
         #Now for the main logic...fetching tweets
@@ -495,11 +502,14 @@ class Witter():
             #then this line does all the hard work. Basicaly for evey top level object in the JSON
             #structure we call out getStatus method with the contents of the USER structure
             #and the values of top level values text/id/created_at
-	    [self.getStatus(x['user'],x['text'], x['id'], x['created_at'],x['in_reply_to_screen_name'], x['in_reply_to_status_id'], "tweet") for x in data]
-	    #hildon.hildon_banner_show_information(self.window,"","Tweets Received")
-	    note = osso.SystemNote(self.osso_c)
-
-	    result = note.system_note_infoprint("Tweets Received")
+	    receive_count = 0
+	    for x in data:
+		    self.getStatus(x['user'],x['text'], x['id'], x['created_at'],x['in_reply_to_screen_name'], x['in_reply_to_status_id'], "tweet")
+		    receive_count=receive_count +1
+		    
+	    if (receive_count > 0):
+		    note = osso.SystemNote(self.osso_c)
+		    result = note.system_note_infoprint(str(receive_count) + " Tweets Received")
 	    self.gettingTweets = False
         except IOError, e:
 	    print "error"
@@ -517,10 +527,10 @@ class Witter():
                 msg = msg +'Server returned ' + str(e.code) + " : " + reason
 	    if (auto==0):
 		    note = osso.SystemNote(self.osso_c)
-		    note.system_note_dialog(msg, type='notice')
+		    note.system_note_dialog(msg)
 
 	    self.gettingTweets = False
-
+	
           
         
     def getDMs(self, auto=0, *args):
@@ -552,10 +562,14 @@ class Witter():
             #then this line does all the hard work. Basicaly for evey top level object in the JSON
             #structure we call out getStatus method with the contents of the USER structure
             #and the values of top level values text/id/created_at
-            [self.getStatus(x['sender'],x['text'], x['id'], x['created_at'],None, None, "dm") for x in data]
-	    note = osso.SystemNote(self.osso_c)
-
-	    result = note.system_note_infoprint("DMs Received")
+            receive_count = 0
+	    for x in data:
+		    self.getStatus(x['sender'],x['text'], x['id'], x['created_at'],"", "", "dm")
+		    receive_count=receive_count +1
+		    
+	    if (receive_count > 0):
+		    note = osso.SystemNote(self.osso_c)
+		    result = note.system_note_infoprint(str(receive_count) + " DMs Received")
 	    self.gettingTweets = False
         except IOError, e:
             msg = 'Error retrieving DMs '
@@ -572,7 +586,7 @@ class Witter():
                 msg = msg +'Server returned ' + str(e.code) + " : " + reason
 	    if (auto==0):
 		    note = osso.SystemNote(self.osso_c)
-		    note.system_note_dialog(msg, type='notice')
+		    note.system_note_dialog(msg)
 	    self.gettingTweets = False
 
 
@@ -608,10 +622,16 @@ class Witter():
             #then this line does all the hard work. Basicaly for evey top level object in the JSON
             #structure we call out getStatus method with the contents of the USER structure
             #and the values of top level values text/id/created_at
-            [self.getStatus(x['user'],x['text'], x['id'], x['created_at'],x['in_reply_to_screen_name'], x['in_reply_to_status_id'], "mention") for x in data]
-	    note = osso.SystemNote(self.osso_c)
-
-	    result = note.system_note_infoprint("Mentions Received")
+            
+	    receive_count = 0
+	    for x in data:
+		    self.getStatus(x['user'],x['text'], x['id'], x['created_at'],x['in_reply_to_screen_name'], x['in_reply_to_status_id'], "mention")
+		    receive_count=receive_count +1
+		    
+	    if (receive_count > 0):
+		    note = osso.SystemNote(self.osso_c)
+		    result = note.system_note_infoprint(str(receive_count) + " Mentions Received")
+		    
 	    self.gettingTweets = False
         except IOError, e:
             msg = 'Error retrieving Mentions '
@@ -628,7 +648,7 @@ class Witter():
                 msg = msg +'Server returned ' + str(e.code) + " : " + reason
 	    if (auto==0):
 		    note = osso.SystemNote(self.osso_c)
-		    note.system_note_dialog(msg, type='notice')
+		    note.system_note_dialog(msg)
 	    self.gettingTweets = False
 
         
@@ -661,10 +681,14 @@ class Witter():
             #then this line does all the hard work. Basicaly for evey top level object in the JSON
             #structure we call out getStatus method with the contents of the USER structure
             #and the values of top level values text/id/created_at
-            [self.getStatus(x['user'],x['text'], x['id'], x['created_at'],x['in_reply_to_screen_name'], x['in_reply_to_status_id'], "public") for x in data]
-	    note = osso.SystemNote(self.osso_c)
-
-	    result = note.system_note_infoprint("Public timeline Received")
+            receive_count = 0
+	    for x in data:
+		    self.getStatus(x['user'],x['text'], x['id'], x['created_at'],x['in_reply_to_screen_name'], x['in_reply_to_status_id'], "public")
+		    receive_count=receive_count +1
+		    
+	    if (receive_count > 0):
+		    note = osso.SystemNote(self.osso_c)
+		    result = note.system_note_infoprint(str(receive_count) + " Public timeline tweets Received")
 	    self.gettingTweets = False
         except IOError, e:
             msg = 'Error retrieving Public timeline '
@@ -681,7 +705,7 @@ class Witter():
                 msg = msg +'Server returned ' + str(e.code) + " : " + reason
 	    if(auto==0):	
 		    note = osso.SystemNote(self.osso_c)
-		    note.system_note_dialog(msg, type='notice')
+		    note.system_note_dialog(msg)
 	    self.gettingTweets = False
 
             
@@ -756,7 +780,7 @@ class Witter():
 			msg = msg +'Server returned ' + str(e.code) + " : " + reason
 		    if (auto ==0):
 			    note = osso.SystemNote(self.osso_c)
-			    note.system_note_dialog(msg, type='notice')
+			    note.system_note_dialog(msg)
 
 
             
@@ -807,12 +831,12 @@ class Witter():
                 msg = msg +'Server returned ' + str(e.code) + " : " + reason
 		
 	    note = osso.SystemNote(self.osso_c)
-	    note.system_note_dialog(msg, type='notice')
+	    note.system_note_dialog(msg)
 
             
     def getTrend(self, name, url):
         
-        self.trendliststore.append([name, self.namecolour,name+" :"+url,self.tweetcolour,None,None])
+        self.trendliststore.append([name, self.namecolour,name+" :"+url,self.tweetcolour,"","dm","",""])
         
         
     def getFriends(self, *args):
@@ -847,7 +871,7 @@ class Witter():
             for x in data:
                 #if we follow someone with no status then you get a key error on status
                 try:
-                    self.getStatus(x['screen_name'],x['status'], x['id'], x['created_at'],None,None, "friend") 
+                    self.getStatus(x['screen_name'],x['status'], x['id'], x['created_at'],"","", "friend") 
                 except KeyError:
                     print  x
 	    note = osso.SystemNote(self.osso_c)
@@ -1076,7 +1100,9 @@ class Witter():
     def on_key_press(self, widget, event, *args): 
         #this picks up the press of the full screen key and toggles
         #from one mode to the other
-       if event.keyval == gtk.keysyms.F6: 
+	self.builder.get_object("hbox1").show_all()
+	self.builder.get_object("hbox2").show_all()
+        if event.keyval == gtk.keysyms.F6: 
              # The "Full screen" hardware key has been pressed 
              if self.window_in_fullscreen: 
                  self.window.unfullscreen () 
@@ -1231,10 +1257,13 @@ class Witter():
     
     def replyTo(self, widget, *args):
         print "reply to : " + self.reply_to_name + " message_id " + self.reply_to
-        self.tweetText.set_text(self.reply_to_name)
+        self.tweetText.set_text(self.reply_to_name + " ")
+	self.tweetText.grab_focus()
+	self.tweetText.set_position(len(self.reply_to_name)+1);
         
     def reTweet(self,widget,*args):
 	    self.tweetText.set_text("RT:" + self.retweettext)
+	    self.tweetText.grab_focus()
   
   #      print "reTweet : " + self.retweetname + " message_id " +self.retweetid
     #    #
@@ -1432,6 +1461,9 @@ class Witter():
 	    self.tweetText.set_text(self.search_terms)
             self.treeview.set_model(self.searchliststore)  
             self.window.set_title(self.serviceName +" - search")  
+	    
+	self.builder.get_object("hbox1").show_all()
+	self.builder.get_object("hbox2").show_all()
             
     def switchView(self, widget):
         #switches the active liststore to display what the user wants
@@ -1515,6 +1547,7 @@ class Witter():
         print file
     
     def CharsRemaining(self, widget):
+	     self.builder.get_object("hbox1").show_all()
 	     tweet = self.builder.get_object("TweetText").get_text()
 	     counter = self.builder.get_object("Counter")
 	     counter.set_text((str(140-len(tweet))))
@@ -1524,8 +1557,8 @@ class Witter():
 		dlg = gtk.AboutDialog()
 		dlg.set_version("0.1.1")
 		dlg.set_name("Witter")
-		#"Marcus Wikström (logo)"
-		dlg.set_authors(["Daniel Would (programmer)", "@mece66 (logo)"])
+		#"Marcus Wikstrm (logo)"
+		dlg.set_authors(["Daniel Would (programmer)", u"Marcus WikstrÃ¶m (logo)"])
 		dlg.set_website("Homepage : http://danielwould.wordpress.com/witter/\nBugtracker : http://garage.maemo.org/projects/witter")
 		def close(w, res):
 			if res == gtk.RESPONSE_CANCEL:
@@ -1642,7 +1675,47 @@ class Witter():
 	    print "running"
 	    return "still running"
 	    
+	
+    def gesture(self, widget, direction, startx, starty):
+	     
+	     widget.scroll_to(0,0)
+	     if (direction == 3):
+		if (self.treeview.get_model() == self.liststore):
+		    self.switchViewTo(self.treeview, "public")
+		elif (self.treeview.get_model() == self.dmliststore):
+		    self.switchViewTo(self.treeview, "mentions")
+		elif (self.treeview.get_model() == self.mentionliststore):
+		    self.switchViewTo(self.treeview, "timeline")
+		elif (self.treeview.get_model() == self.publicliststore):
+		    self.switchViewTo(self.treeview, "trends")
+		elif (self.treeview.get_model() == self.trendliststore):
+		    self.switchViewTo(self.treeview, "friends")
+		elif (self.treeview.get_model() == self.friendsliststore):
+		    self.switchViewTo(self.treeview, "search")
+		elif (self.treeview.get_model() == self.searchliststore):
+		    self.switchViewTo(self.treeview, "direct")
+		
+		    
+	     if (direction == 2):
+		if (self.treeview.get_model() == self.liststore):
+		    self.switchViewTo(self.treeview, "mentions")
+		elif (self.treeview.get_model() == self.dmliststore):
+		    self.switchViewTo(self.treeview, "search")
+		elif (self.treeview.get_model() == self.mentionliststore):
+		    self.switchViewTo(self.treeview, "direct")
+		elif (self.treeview.get_model() == self.publicliststore):
+		    self.switchViewTo(self.treeview, "timeline")
+		elif (self.treeview.get_model() == self.trendliststore):
+		    self.switchViewTo(self.treeview, "public")
+		elif (self.treeview.get_model() == self.friendsliststore):
+		    self.switchViewTo(self.treeview, "trends")
+		elif (self.treeview.get_model() == self.searchliststore):
+		    self.switchViewTo(self.treeview, "friends")    
 	    
+    def scrolling (self, widget, direction, startx, starty):
+	     self.builder.get_object("hbox1").hide_all()
+	     self.builder.get_object("hbox2").hide_all()
+	
 if __name__ == "__main__":  
     #this is just what initialises the app and calls run
     app = Witter() 

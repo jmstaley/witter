@@ -79,6 +79,7 @@
 	<child>
 	  <object class="HildonPannableArea" id="pannableArea">
 	    <property name="visible">True</property>
+	     
 	  </object>
 	  <packing>
             <property name="expand">True</property>
@@ -128,9 +129,8 @@
             <child>
               <object class="HildonButton" id="Refresh">
                 <property name="label" translatable="yes">Refresh</property>
-		<property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
+		<property name="stock_id">gtk-refresh</property>
+		<property name="name">Refresh</property>
                 <signal name="clicked" handler="getTweets"/>
               </object>
               <packing>
