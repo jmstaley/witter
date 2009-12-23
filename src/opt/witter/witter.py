@@ -230,11 +230,13 @@ class Witter():
         # one for name and the other for the tweet
         #self.tvcname = gtk.TreeViewColumn('Name')
         cell = witter.witter_cell_renderer.witterCellRender()
+	#cell_text = gtk.CellRendererText()
 	#cell = gtk.CellRendererText()
         cell.set_property('background',"#6495ED")
 	cell.set_property('font_size',18)
 	
 	self.tvctweet = gtk.TreeViewColumn('Pango Markup', cell, markup=2)
+	
 
         #self.tvctweet = gtk.TreeViewColumn('Tweet')
         # add the two tree view columns to the treeview
@@ -243,8 +245,10 @@ class Witter():
         # we need a CellRendererText to render the data
         
         # add the cell renderer to the columns
-        #self.tvcname.pack_start(cell, True)
-        #self.tvctweet.pack_start(cell,True)
+        #self.tvcname.pack_start(cell_text, True)
+	#self.tvctweet.pack_start(cell,True)
+       #self.tvctweet.pack_start(cell_text,True)
+	
         # set the cell "text" attribute to column 0 - retrieve text
         # from that column in liststore and treat it as the text to render
         # in this case it's the name of a tweeter
@@ -451,26 +455,37 @@ class Witter():
     def updateSelectedView(self, *args):
         #call the get method for whichever liststore we're viewing
         if (self.treeview.get_model() == self.liststore):
-            self.getTweets()
+            #self.getTweets()
+	    refreshtask = witter.RefreshTask(self.getTweetsWrapper, self.showBusy)
+	    refreshtask.refresh()
         elif (self.treeview.get_model() == self.dmliststore):
-            self.getDMs()
+            refreshtask = witter.RefreshTask(self.getDMsWrapper, self.showBusy)
+	    refreshtask.refresh()
         elif (self.treeview.get_model() == self.mentionliststore):
-            self.getMentions()
+            
+	    refreshtask = witter.RefreshTask(self.getMentionsWrapper, self.showBusy)
+	    refreshtask.refresh()
         elif (self.treeview.get_model() == self.publicliststore):
-            self.getPublic()
+            refreshtask = witter.RefreshTask(self.getPublicWrapper, self.showBusy)
+	    refreshtask.refresh()
         elif (self.treeview.get_model() == self.trendliststore):
-            self.getTrends()
+            refreshtask = witter.RefreshTask(self.getTrends, self.showBusy)
+	    refreshtask.refresh()
         elif (self.treeview.get_model() == self.friendsliststore):
-            self.getFriends()
+            refreshtask = witter.RefreshTask(self.getFriends, self.showBusy)
+	    refreshtask.refresh()
         elif (self.treeview.get_model() == self.searchliststore):
-            self.getSearch()
+            refreshtask = witter.RefreshTask(self.getSearchWrapper, self.showBusy)
+	    refreshtask.refresh()
 	
 	self.builder.get_object("hbox1").hide_all()
 	self.builder.get_object("hbox2").hide_all()
 	
             
     def getTweets(self, auto=0, *args):
-	
+	if (self.gettingTweets == True):
+		#already in this method in a refresh
+		return
 	self.gettingTweets = True
         print "getting tweets"
         #Now for the main logic...fetching tweets
@@ -1558,7 +1573,7 @@ class Witter():
      
     def about(self,widget, *args):
 		dlg = gtk.AboutDialog()
-		dlg.set_version("0.1.1")
+		dlg.set_version("0.2.0")
 		dlg.set_name("Witter")
 		#"Marcus Wikstrm (logo)"
 		dlg.set_authors(["Daniel Would (programmer)", u"Marcus Wikström (logo)"])

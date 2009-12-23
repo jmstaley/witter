@@ -127,11 +127,16 @@
               </packing>
             </child>
             <child>
-              <object class="HildonButton" id="Refresh">
-                <property name="label" translatable="yes">Refresh</property>
+	      <object class="GtkImage" id="image1">
+		<property name="visible">True</property>
+		<property name="icon_name">view-refresh</property>
+	     </object>
+	     <object class="HildonButton" id="Refresh">
+                <property name="image">image1</property>
+		<property name="label">Refresh</property>
 		<property name="stock_id">gtk-refresh</property>
 		<property name="name">Refresh</property>
-                <signal name="clicked" handler="getTweets"/>
+		<signal name="clicked" handler="getTweets"/>
               </object>
               <packing>
                 <property name="expand">False</property>

@@ -38,12 +38,17 @@ class RefreshTask(object):
 	while (self._stopped != True):
 		count = 0;
 		self.callback(*args)
+		#set the refresh flag back to false
+		self.refresh=False
 		#sleep and check, wake up every 10 seconds and check if we've been told to end
 		while (count != (sleep/10)):
 			time.sleep(10)
 			if (self._stopped == True):
 				print "killing thread"
 				return
+			if (self.refresh ==True):
+				#exit the while look
+				break
 			count = count +1;
 		
 #not yet used, this was from an example I found, I may use it to show some kind of 'busy updating' indicator
@@ -54,6 +59,14 @@ class RefreshTask(object):
 
    def start(self, *args, **kwargs):
        threading.Thread(target=self._start, args=args, kwargs=kwargs).start()
+
+   def _refresh(self, *args ):
+	   #just call the callback and end
+	   self.callback(*args)
+	   
+   def refresh(self, *args, **kwargs):
+	   #used to do a single refresh in background thread
+	 threading.Thread(target=self._refresh, args=args, kwargs=kwargs).start()
 
    def stop(self):
        print "stopping thread"
