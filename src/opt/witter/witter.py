@@ -1363,21 +1363,24 @@ class Witter():
 
 
     def FollowUser(self, widget, name, *args):
+        #strip out the @ which isn't really part of the username
+        name = name.replace("@", "")
         print "follow: " + name
+
         try:
 
             #if we have an access token, use oauth
-            if (self.access_token != ""):
-                print "using oauth to unfollow"
-                twitter = oauthtwitter.OAuthApi(self.CONSUMER_KEY, self.CONSUMER_SECRET, self.access_token)
-                if (self.user == ""):
-                    self.user = twitter.GetUserInfo()
+          #  if (self.access_token != ""):
+           #     print "using oauth to unfollow"
+            #    twitter = oauthtwitter.OAuthApi(self.CONSUMER_KEY, self.CONSUMER_SECRET, self.access_token)
+             #   if (self.user == ""):
+              #      self.user = twitter.GetUserInfo()
+#
+ #               data = twitter.CreateFriendship(name)
+  ##              note = osso.SystemNote(self.osso_c)
+    #            result = note.system_note_infoprint("Now following " + name)
 
-                data = twitter.CreateFriendship(name)
-                note = osso.SystemNote(self.osso_c)
-                result = note.system_note_infoprint("Now following " + name)
-
-            else:
+     #       else:
                 post = urllib.urlencode({ 'screen_name' : name })
 
                 #build the request with the url and our post data
@@ -1417,49 +1420,51 @@ class Witter():
                 else:
                     reason = ""
                 msg = msg + 'Server returned ' + str(e.code) + " : " + reason
-            if (auto == 0):
-                note = osso.SystemNote(self.osso_c)
-                note.system_note_dialog(msg)
+
+            note = osso.SystemNote(self.osso_c)
+            note.system_note_dialog(msg)
             print msg
     def UnFollowUser(self, widget, name, *args):
+        #strip out the @ which isn't really part of the username
+        name = name.replace("@", "")
         print "unfollow : " + name
+
         try:
             #if we have an access token, use oauth
-            if (self.access_token != ""):
-                print "using oauth to unfollow"
-                twitter = oauthtwitter.OAuthApi(self.CONSUMER_KEY, self.CONSUMER_SECRET, self.access_token)
-                if (self.user == ""):
-                    self.user = twitter.GetUserInfo()
+      #      if (self.access_token != ""):
+       #         print "using oauth to unfollow"
+        #        twitter = oauthtwitter.OAuthApi(self.CONSUMER_KEY, self.CONSUMER_SECRET, self.access_token)
+         #       if (self.user == ""):
+         #           self.user = twitter.GetUserInfo()
+#
+ #               data = twitter.DestroyFriendship(name)
+  ##              note = osso.SystemNote(self.osso_c)
+ #               result = note.system_note_infoprint("Unfollowed " + name)
+#
+     #    else:
+            post = urllib.urlencode({ 'screen_name' : name })
+            #build the request with the url and our post data
+            req = urllib2.Request('http://twitter.com/friendships/destroy.json', post)
 
-                data = twitter.DestroyFriendship(name)
-                note = osso.SystemNote(self.osso_c)
-                result = note.system_note_infoprint("Unfollowed " + name)
+            auth_handler = urllib2.HTTPBasicAuthHandler()
+            #realm here is important. or at least it seemed to be
+            #this info is on the login box if you go to the url in a browser
+            auth_handler.add_password(realm='Twitter API',
+                              uri='http://twitter.com/friendships/destroy.json',
+                              user=self.username,
+                              passwd=self.password)
+            #we create an 'opener' object with our auth_handler
+            opener = urllib2.build_opener(auth_handler)
+            # ...and install it globally so it can be used with urlopen.
+            urllib2.install_opener(opener)
+            #switch on whether this is an refresh or a first download
 
-            else:
-                post = urllib.urlencode({ 'screen_name' : name })
-
-                #build the request with the url and our post data
-                req = urllib2.Request('http://twitter.com/friendships/destroy.json', post)
-
-                auth_handler = urllib2.HTTPBasicAuthHandler()
-                #realm here is important. or at least it seemed to be
-                #this info is on the login box if you go to the url in a browser
-                auth_handler.add_password(realm='Twitter API',
-                                  uri='http://twitter.com/friendships/destroy.json',
-                                  user=self.username,
-                                  passwd=self.password)
-                #we create an 'opener' object with our auth_handler
-                opener = urllib2.build_opener(auth_handler)
-                # ...and install it globally so it can be used with urlopen.
-                urllib2.install_opener(opener)
-                #switch on whether this is an refresh or a first download
-
-                json = urllib2.urlopen(req)
-                #JSON is awesome stuff. we get given a long string of json encoded information
-                #which contains all the tweets, with lots of info, we decode to a json object
-                data = simplejson.loads(json.read())
-                note = osso.SystemNote(self.osso_c)
-                result = note.system_note_infoprint("Unfollowed " + name)
+            json = urllib2.urlopen(req)
+            #JSON is awesome stuff. we get given a long string of json encoded information
+            #which contains all the tweets, with lots of info, we decode to a json object
+            data = simplejson.loads(json.read())
+            note = osso.SystemNote(self.osso_c)
+            result = note.system_note_infoprint("Unfollowed " + name)
         except IOError, e:
             print "error"
             msg = 'Error unfollowing ' + name + ' '
@@ -1531,7 +1536,8 @@ class Witter():
         #open a url in a browser
         if (self.maemo_ver == 5):
 	    print "opening browser - maemo5 style"
-            webbrowser.open_new(url)
+            #webbrowser.open_new(url)
+            self.osso_rpc.rpc_run_with_defaults("osso_browser", "open_new_window", (url,))
         else:
 	    print "opening browser - maemo4 style"
             webbrowser.open(url, context=self.osso_c)
@@ -1659,7 +1665,7 @@ class Witter():
              self.request_token = twitter.getRequestToken()
              authorization_url = twitter.getAuthorizationURL(self.request_token)
              print authorization_url
-             webbrowser.open_new(authorization_url)
+             self.osso_rpc.rpc_run_with_defaults("osso_browser", "open_new_window", (authorization_url,))
              note = hildon.Note("confirmation", self.window, "authorise with twitter...")
              note.set_button_texts("ok", "cancel")
              note.connect("response", self.gtk_widget_hide)
