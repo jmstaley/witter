@@ -11,45 +11,96 @@ class witterCellRender(gtk.GenericCellRenderer):
 				'Text to be displayed',
 				'Text to be displayed',
 				'',
-				gobject.PARAM_READWRITE
-																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																),
+				gobject.PARAM_READWRITE	),
 			'markup': (gobject.TYPE_STRING,
 				'markup type',
 				'markup type',
 				'',
-				gobject.PARAM_READWRITE
-																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																),
-			'background': (gobject.TYPE_STRING,
+				gobject.PARAM_READWRITE),
+			'backgroundt_r': (gobject.TYPE_INT,
 				'Background of the cell',
 				'The background of the cell',
-				'#00FF00',
-				gobject.PARAM_READWRITE
-																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																),
+				0,
+				65535,
+				0,
+				gobject.PARAM_READWRITE),
+			'backgroundt_b': (gobject.TYPE_INT,
+				'Background of the cell',
+				'The background of the cell',
+				0,
+				65535,
+				0,
+				gobject.PARAM_READWRITE),
+			'backgroundt_g': (gobject.TYPE_INT,
+				'Background of the cell',
+				'The background of the cell',
+				0,
+				65535,
+				0,
+				gobject.PARAM_READWRITE),
+			'backgroundt_p': (gobject.TYPE_INT,
+				'Background of the cell',
+				'The background of the cell',
+				0,
+				65535,
+				0,
+				gobject.PARAM_READWRITE),
+			'backgroundb_r': (gobject.TYPE_INT,
+				'Background of the cell',
+				'The background of the cell',
+				0,
+				65535,
+				0,
+				gobject.PARAM_READWRITE),
+			'backgroundb_b': (gobject.TYPE_INT,
+				'Background of the cell',
+				'The background of the cell',
+				0,
+				65535,
+				0,
+				gobject.PARAM_READWRITE),
+			'backgroundb_g': (gobject.TYPE_INT,
+				'Background of the cell',
+				'The background of the cell',
+				0,
+				65535,
+				0,
+				gobject.PARAM_READWRITE),
+			'backgroundb_p': (gobject.TYPE_INT,
+				'Background of the cell',
+				'The background of the cell',
+				0,
+				65535,
+				0,
+				gobject.PARAM_READWRITE),
 			'timestamp': (gobject.TYPE_STRING,
 				'timestamp to be displayed',
 				'timestamp to be displayed',
 				'',
-				gobject.PARAM_READWRITE
-																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																),
+				gobject.PARAM_READWRITE),
 			'replyto': (gobject.TYPE_STRING,
 				'reply_to Text to be displayed',
 				'reply_to Text to be displayed',
 				'',
-				gobject.PARAM_READWRITE
-																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																),
+				gobject.PARAM_READWRITE),
+			'source': (gobject.TYPE_STRING,
+				'source Text to be displayed',
+				'source Text to be displayed',
+				'',
+				gobject.PARAM_READWRITE),
 			'font_size': (gobject.TYPE_INT,
 				'font_size',
 				'font_size',
 				0,
 				50,
 				0,
-				gobject.PARAM_READWRITE
-																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																)
+				gobject.PARAM_READWRITE)
 			}
 	rect_height = 0
 	font_size = 16
 
 	def __init__(self):
+		print "renderer init"
 		#gobject.GObject.__init__(self)
 		gtk.GenericCellRenderer.__init__(self)
 
@@ -87,6 +138,7 @@ class witterCellRender(gtk.GenericCellRenderer):
 
 	def on_render(self, window, widget, background_area, cell_area, expose_area, flags):
 		#get a cairo context object
+
 		cairo_context = pangocairo.CairoContext(window.cairo_create())
 
 		x = cell_area.x
@@ -98,22 +150,23 @@ class witterCellRender(gtk.GenericCellRenderer):
 		self.render_rect(cairo_context, x, y, widget.allocation.width - 8, h)
 
 		pat = cairo.LinearGradient(x, y, x, y + h)
-		color = gtk.gdk.color_parse("#6bd3ff")
+		color = gtk.gdk.Color(red=self.get_property('backgroundt_r'), green=self.get_property('backgroundt_g'), blue=self.get_property('backgroundt_b'), pixel=self.get_property('backgroundt_p'))
+		#color = gtk.gdk.color_parse(self.get_property('background_top'))
+		## #6bd3ff
 		pat.add_color_stop_rgba(
 							0.0,
 							self.get_cairo_color(color.red),
 							self.get_cairo_color(color.green),
 							self.get_cairo_color(color.blue),
-							1
-																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																)
-
-		color = gtk.gdk.color_parse("#0075b5")
+							1)
+		## #0075b5
+		#color = gtk.gdk.color_parse(self.get_property('background_bottom'))
+		color = gtk.gdk.Color(red=self.get_property('backgroundb_r'), green=self.get_property('backgroundb_g'), blue=self.get_property('backgroundb_b'), pixel=self.get_property('backgroundb_p'))
 		pat.add_color_stop_rgb(
 							1.0,
 							self.get_cairo_color(color.red),
 							self.get_cairo_color(color.green),
-							self.get_cairo_color(color.blue)
-																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																)
+							self.get_cairo_color(color.blue))
 
 
 		cairo_context.set_source(pat)
@@ -164,7 +217,8 @@ class witterCellRender(gtk.GenericCellRenderer):
 			layout = cairo_context.create_layout()
 			cairo_context.set_source_rgba(1, 1, 1, 1)
 			font = pango.FontDescription("Sans")
-			font.set_size(pango.SCALE * (self.get_property('font_size') - 6))
+			font.set_size(pango.SCALE * (self.get_property('font_size') - 2))
+			#font.set_size(pango.SCALE * (12))
 			font.set_style(pango.STYLE_NORMAL)
 			font.set_weight(pango.WEIGHT_BOLD)
 			layout.set_font_description(font)
@@ -179,11 +233,12 @@ class witterCellRender(gtk.GenericCellRenderer):
 		cairo_context.set_source_rgba(1, 1, 1, 1)
 		cairo_context.select_font_face("Georgia",
                 cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-		cairo_context.set_font_size(self.get_property('font_size') - 5)
-		ts_x_bearing, ts_y_bearing, ts_width, ts_height = cairo_context.text_extents(str(self.get_property('timestamp')))[:4]
+		#cairo_context.set_font_size(self.get_property('font_size') - 5)
+		cairo_context.set_font_size(12)
+		ts_x_bearing, ts_y_bearing, ts_width, ts_height = cairo_context.text_extents("From " + str(self.get_property('source')) + " at " + str(self.get_property('timestamp')))[:4]
 		#position in the bottom right, in set by the width of the timestamp, and a little padding
 		cairo_context.move_to(x + (w - (ts_width + 10)), y + (h - 5))
-		cairo_context.show_text(str(self.get_property('timestamp')))
+		cairo_context.show_text("From " + str(self.get_property('source')) + " at " + str(self.get_property('timestamp')))
 
 #	def render_rect(self, cr, x, y, w, h):
 		#render a rectangle
@@ -235,22 +290,22 @@ class witterCellRender(gtk.GenericCellRenderer):
 		inkRect, logicalRect = layout.get_pixel_extents()
 		tweet_x, tweet_y, width, tweet_h = logicalRect
 
-		if ((self.get_property('replyto') != "") & (self.get_property('replyto') != None)):
+		#if ((self.get_property('replyto') != "") & (self.get_property('replyto') != None)):
 			#process any retweet text
-			layout2 = cairo_context.create_layout()
-			font = pango.FontDescription("Sans")
-			font.set_size(pango.SCALE * (self.get_property('font_size') - 6))
-			font.set_style(pango.STYLE_NORMAL)
-			font.set_weight(pango.WEIGHT_BOLD)
-			layout2.set_font_description(font)
-			layout2.set_wrap(pango.WRAP_WORD)
-			layout2.set_width(pango.SCALE * 780)
-			#set position under the main tweet text
-			layout2.set_text(self.get_property('replyto'))
-			inkRect2, logicalRect2 = layout2.get_pixel_extents()
-			reply_x, reply_y, reply_width, reply_tweet_h = logicalRect2
-
-			tweet_h = tweet_h + reply_tweet_h
+			#layout2 = cairo_context.create_layout()
+			#font = pango.FontDescription("Sans")
+			#font.set_size(pango.SCALE * (self.get_property('font_size') - 6))
+			#font.set_style(pango.STYLE_NORMAL)
+			#font.set_weight(pango.WEIGHT_BOLD)
+			#layout2.set_font_description(font)
+			#layout2.set_wrap(pango.WRAP_WORD)
+			#layout2.set_width(pango.SCALE * 780)
+			##set position under the main tweet text
+			#layout2.set_text(self.get_property('replyto'))
+			#inkRect2, logicalRect2 = layout2.get_pixel_extents()
+			#reply_x, reply_y, reply_width, reply_tweet_h = logicalRect2
+			#print reply_tweet_h
+		#	tweet_h = tweet_h + 15
 		#figure out how many times we need to split the string to fit on the screen
 		#divide_text = width / (widget.allocation.width - 8)
 		#round the value to an int and plus 1

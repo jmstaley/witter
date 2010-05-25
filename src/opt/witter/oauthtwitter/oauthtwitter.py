@@ -26,6 +26,42 @@ ACCESS_TOKEN_URL = 'https://twitter.com/oauth/access_token'
 AUTHORIZATION_URL = 'http://twitter.com/oauth/authorize'
 SIGNIN_URL = 'http://twitter.com/oauth/authenticate'
 
+REQUIRES_POST = (
+    'friendships/create',
+    'friendships/destroy',
+    'statuses/update',
+    'statuses/destroy',
+    #'statuses/mentions',
+    'direct_messages/new',
+    'direct_messages/destroy',
+    'account/end_session',
+    'account/update_delivery_device',
+    'account/update_profile_colors',
+    'account/update_profile_image',
+    'account/update_profile_background_image',
+    'account/update_profile',
+    'favorites/create',
+    'favorites/destroy',
+    'blocks/create',
+    'blocks/destroy',
+    'saved_searches/create',
+    'saved_searches/destroy',
+)
+
+def RequiresPost(url):
+    """
+    Hackishly decides whether or not a request is required to be POSTed
+    """
+    bits = url.split('/')
+    path = '/'.join(bits[3:-1])
+    if path in REQUIRES_POST:
+        return True
+    try:
+        if path + '/' + bits[-1].split('.')[0] in REQUIRES_POST:
+            return True
+    except:
+        pass
+    return False
 
 class OAuthApi(Api):
     def __init__(self, consumer_key, consumer_secret, access_token=None):
@@ -71,7 +107,7 @@ class OAuthApi(Api):
         # Add key/value parameters to the query string of the url
         #url = self._BuildUrl(url, extra_params=extra_params)
 
-        if post_data:
+        if post_data is not None:
             http_method = "POST"
             extra_params.update(post_data)
         else:
@@ -87,7 +123,7 @@ class OAuthApi(Api):
 
         #encoded_post_data = self._EncodePostData(post_data)
 
-        if post_data:
+        if post_data is not None:
             encoded_post_data = req.to_postdata()
             url = req.get_normalized_http_url()
         else:

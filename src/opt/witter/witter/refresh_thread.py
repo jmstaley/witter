@@ -24,7 +24,7 @@ gtk.gdk.threads_init()
 class RefreshTask(object):
 
 
-   def __init__(self, callback, loop_callback, complete_callback=None):
+   def __init__(self, callback, extraMsgs, loop_callback, complete_callback=None):
        #takes in the method to call to get tweets, eg getTweets, getMentions ec
        self.callback = callback
        #and the call back to give updates on progress
@@ -32,25 +32,26 @@ class RefreshTask(object):
        #and something to tell when we're finished
        self.complete_callback = complete_callback
        self._stopped = False
+       self.extraMsgs = extraMsgs
 
-   def _start(self, sleep,*args ):
+   def _start(self, sleep, *args):
        #loop forever, or until someone calls stop on this thread
 	while (self._stopped != True):
 		count = 0;
-		self.callback(*args)
+		self.callback(autoval=1)
 		#set the refresh flag back to false
-		self.refresh=False
+		self.refresh = False
 		#sleep and check, wake up every 10 seconds and check if we've been told to end
-		while (count != (sleep/10)):
+		while (count != (sleep / 10)):
 			time.sleep(10)
 			if (self._stopped == True):
 				print "killing thread"
 				return
-			if (self.refresh ==True):
+			if (self.refresh == True):
 				#exit the while look
 				break
-			count = count +1;
-		
+			count = count + 1;
+
 #not yet used, this was from an example I found, I may use it to show some kind of 'busy updating' indicator
 #but I've not figured out how to yet
    def _loop(self, args):
@@ -60,10 +61,13 @@ class RefreshTask(object):
    def start(self, *args, **kwargs):
        threading.Thread(target=self._start, args=args, kwargs=kwargs).start()
 
-   def _refresh(self, *args ):
+   def _refresh(self, *args):
 	   #just call the callback and end
-	   self.callback(*args)
-	   
+       if (self.extraMsgs != 0):
+           self.callback(autoval=0, get_older=True, more=self.extraMsgs)
+       else:
+           self.callback(autoval=0, get_older=False, more=self.extraMsgs)
+
    def refresh(self, *args, **kwargs):
 	   #used to do a single refresh in background thread
 	 threading.Thread(target=self._refresh, args=args, kwargs=kwargs).start()
