@@ -19,7 +19,7 @@
 # ============================================================================
 # Name        : witter.py
 # Author      : Daniel Would
-# Version     : 0.1
+# Version     : 0.3.4
 # Description : Witter
 # ============================================================================
 
@@ -38,6 +38,8 @@ import socket
 import re
 import string
 import osso
+import dbus
+import dbus.glib
 import os
 import webbrowser
 import ConfigParser
@@ -51,9 +53,13 @@ import time
 import pickle
 import gobject
 import cProfile
+import dbus
+import dbus.glib
+import conic 
 #import witter components
 import ui
 import account
+
 
 gtk.gdk.threads_init()
 
@@ -71,7 +77,7 @@ class Witter():
     #first an init method to set everything up    
     def __init__(self):
         #version of witter
-        self.version = "0.3.1"
+        self.version = "0.3.4"
         #object holding witter config
         self.config = None
         #defaults for auto-refresh
@@ -108,7 +114,14 @@ class Witter():
 
         self.osso_c = osso.Context("witter", self.version, False)
         self.osso_rpc = osso.Rpc(self.osso_c)
+        self.osso_rpc.set_rpc_callback("uk.wouldd.witter", "/uk/wouldd/witter", "uk.wouldd.witter", self.cb_switch_view, self.osso_c)
         # set name of application: this shows in titlebar
+        
+        system_bus = dbus.Bus.get_system()
+        system_bus.add_signal_receiver(self._on_orientation_signal, \
+                 signal_name='sig_device_orientation_ind', \
+                 dbus_interface='com.nokia.mce.signal', \
+                 path='/com/nokia/mce/signal')
 
         self.twitterUrlRoot = "https://twitter.com/"
         self.twitterSearchUrlRoot = "https://search.twitter.com/"
@@ -127,6 +140,7 @@ class Witter():
         self.retweettext = ""
         self.selectedUser = ""
         self.theme = "default"
+        self.gestures = True
 
         #
         #go read config file
@@ -151,20 +165,29 @@ class Witter():
                 additional_acc = account.account(self.osso_c, acc, self)
                 self.accounts.append(additional_acc)
 
+        #reload any cached tweets
+        self.activeAccount.tweetstore = self.reload_timeline_data('/home/user/.wittertl',self.activeAccount.getTimeline())
+        self.activeAccount.mentionstore = self.reload_timeline_data('/home/user/.wittermen',self.activeAccount.getMentionsList())
+        self.activeAccount.dmstore = self.reload_timeline_data('/home/user/.witterdm',self.activeAccount.getDmsList())
+        
+
         #call the refresh thread
 
         #pass the witter ui a reference to this object for callbacks
         self.ui = ui.WitterUI(self)
         self.ui.setActiveListStore(self.activeAccount.getTimeline(),4)
         self.ui.theme = self.theme
+        self.ui.load_theme_icons()
         self.ui.select_ui_theme(self.theme)
+        self.ui.gesture_enabled = self.gestures
         self.gettingTweets = False
         if (self.activeAccount.getUsername() != "Username"):
             self.start_refresh_threads()
         #
         #need to load all account references, and set the active account
         #
-
+        from portrait import FremantleRotation
+        FremantleRotation("Witter", self.ui.window)
 
 
     def quit(self, *args):
@@ -236,8 +259,10 @@ class Witter():
 
 
     def FollowTweetAuthor(self, widget):
+        #TODO : put this on a thread
         self.activeAcount.FollowUser(widget, self.reply_to_name)
-
+        refreshtask = witter.RefreshTask(self.followUserWrapper, 0, None)
+        refreshtask.refresh()
 
 
     def UnFollowTweetAuthor(self, widget):
@@ -292,7 +317,10 @@ class Witter():
         self.ui.setTweetText("RT " + retweet)
         self.ui.setCursorAt(0)
 
-
+    def reTweetNew(self,widget,*args):
+        self.ui.hideActionButtons()
+        self.ui.showBottomBar()
+        self.activeAccount.newRetweet(self.retweetid)
 
     def openBrowser(self, widget, url, *args):
         #open a url in a browser
@@ -362,13 +390,18 @@ class Witter():
             try:
                 #self.access_token = config.get("credentials", "access_token")
                 topCol = config.get("UI", "bg_top")
-                print topCol
+                
                 self.bg_top_color = gtk.gdk.color_parse(topCol)
                 bottomCol = config.get("UI", "bg_bottom")
-                print bottomCol
+                
                 self.bg_bottom_color = gtk.gdk.color_parse(bottomCol)
                 self.font_size = int(config.get("UI", "font_size"))
                 self.theme = config.get("UI", "theme")
+                gestures = config.get("UI","gestures_enabled")
+                if (gestures == 'True'):
+                    self.gestures = True
+                else:
+                    self.gestures= False
             except ConfigParser.NoSectionError:
                 print "no text colour setting"
             except ConfigParser.NoOptionError:
@@ -469,7 +502,7 @@ class Witter():
                 print "end of file, failed to load"
                 print e
                 self.config = None
-
+            
         except IOError:
             #couldn't find the file set uid so we can prompt
 	        #for creds
@@ -492,6 +525,10 @@ class Witter():
             f.write("bg_bottom = " + self.ui.bg_bottom_color.to_string() + "\n")
             f.write("font_size = " + str(self.font_size) + "\n")
             f.write("theme = " + self.ui.theme + "\n")
+            if self.ui.gesture_enabled:
+                f.write("gestures_enabled = True\n")
+            else:
+                f.write("gestures_enabled = False\n")
             f.write("[refresh_interval]\n")
             f.write("timeline = " + str(self.timelineRefreshInterval) + "\n")
             f.write("mentions = " + str(self.mentionsRefreshInterval) + "\n")
@@ -534,6 +571,93 @@ class Witter():
             print "written config object to file"
         except IOError, e:
             print "failed to write ConfigObject"
+        
+        self.save_timeline_data('/home/user/.wittertl',self.activeAccount.getTimeline())
+        self.save_timeline_data('/home/user/.wittermen',self.activeAccount.getMentionsList())
+        self.save_timeline_data('/home/user/.witterdm',self.activeAccount.getDmsList())
+       
+    def save_timeline_data(self,file,store):
+        try:
+            f5 = open(file, 'w')
+            f5.write("[tweets]\n")
+            counter =0
+            item = store.get_iter_first()
+            #just store the top 20 tweets
+            while (item != None) and (counter < 20):
+                f5.write("senderName" + str(counter) + " = " + store.get_value(item,0)+"\n")
+                f5.write("senderId" + str(counter) + " = " +store.get_value(item,1)+"\n")
+                tweet = store.get_value(item,2)
+                tweet = tweet.replace("\n","&CR;")
+                f5.write("tweet" + str(counter) + " = " +tweet+"\n")
+                #3 is unused now, used to be tweet colour
+                f5.write("tweetId" + str(counter) + " = " +str(store.get_value(item,4))+"\n")
+                f5.write("type" + str(counter)+" = " + str(store.get_value(item,5))+"\n")
+                f5.write("createdAt" + str(counter) + " = " +store.get_value(item,6)+"\n")
+                reply = store.get_value(item,7)
+                reply = reply.replace("\n","&CR;")
+                f5.write("replyTo" + str(counter) + " = " +reply+"\n")
+                f5.write("source" + str(counter) + " = " +store.get_value(item,8)+"\n")
+                #9 is avatar pic
+                formattedTweet = store.get_value(item,10)
+                formattedTweet = formattedTweet.replace("\n","&CR;")
+                f5.write("formattedTweet" + str(counter) + " = " +formattedTweet+"\n")
+                
+                item = store.iter_next(item)
+                counter= counter+1
+                
+        except IOError, e:
+            print "failed to write timeline history file " + file
+       
+    def reload_timeline_data(self, file,tweetstore):
+        #reloads timeline/mentions/dms from files into the current active account
+        try:
+            config = ConfigParser.ConfigParser()
+            config.readfp(open(file))
+
+            counter = 0
+            while True:
+                senderName = config.get("tweets", "senderName" + str(counter));
+                senderId = config.get("tweets", "senderId" + str(counter));
+                tweet = config.get("tweets", "tweet" + str(counter));
+                tweet = tweet.replace("&CR;","\n")
+                tweetId = config.get("tweets", "tweetId" + str(counter));
+                tweet_long_id = float(tweetId)
+                createdAt = config.get("tweets", "createdAt" + str(counter));
+                replyTo = config.get("tweets", "replyTo" + str(counter));
+                replyTo = replyTo.replace("&CR;","\n")
+                type = config.get("tweets", "type" + str(counter));
+                source = config.get("tweets", "source" + str(counter));
+                formattedTweet = config.get("tweets", "formattedTweet" + str(counter));
+                formattedTweet = formattedTweet.replace("&CR;", "\n")
+                #load avatar
+                filename = senderId+".jpg"
+                if (os.path.isfile("/home/user/.witterPics/" + self.activeAccount.accountdata.servicename + "/" + filename)):
+                    try:
+                        avatar = gtk.gdk.pixbuf_new_from_file("/home/user/.witterPics/" + self.activeAccount.accountdata.servicename + "/" + filename)
+                    except gobject.GError:
+                        #failed to load file, delete it, and go fetch a new one
+                        print "corrupted avatar file found, deleting it"
+                        os.remove("/home/user/.witterPics/" + self.accountdata.servicename + "/" + filename)
+                        print "bad file deleted, returning default icon"
+                        avatar = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/default/tweet.png")
+                else:
+                    avatar = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/default/tweet.png")
+                avatar = avatar.scale_simple(60, 60, gtk.gdk.INTERP_BILINEAR)
+                tweetstore.append([senderName,senderId,tweet,"",tweet_long_id,type,createdAt,replyTo,source,avatar,formattedTweet])
+                counter=counter+1
+                
+                
+        except ConfigParser.NoSectionError:
+            print "Failed to load cached timeline"
+        except ConfigParser.NoOptionError:
+            print "Failed to load cached timeline"
+        except IOError:
+            print "failed to read timeline file"
+            
+        except EOFError, e:
+            print "end of file, failed/finished? to load cached timeline"
+            print e
+        return tweetstore
 
 
     def createConfig(self):
@@ -716,12 +840,14 @@ class Witter():
 
     def getTweetsWrapper(self, get_older=False, more=0, autoval=None):
         self.ui.showBusy(1)
+        self.establish_connection()
         self.activeAccount.getTweets(auto=autoval, older=get_older, get_count=more)
         self.ui.showBusy(-1)
 
 
     def getDMsWrapper(self, get_older=False, autoval=None, more=0, *args):
         self.ui.showBusy(1)
+        self.establish_connection()
         self.activeAccount.getDMs(auto=autoval, older=get_older, get_count=more)
         self.ui.showBusy(-1)
 
@@ -729,17 +855,20 @@ class Witter():
     def getMentionsWrapper(self, get_older=False, autoval=None, more=0, *args):
 
         self.ui.showBusy(1)
+        self.establish_connection()
         self.activeAccount.getMentions(auto=autoval, older=get_older, get_count=more)
         self.ui.showBusy(-1)
 
 
     def getPublicWrapper(self, get_older=False, autoval=None, more=0, *args):
-	    self.ui.showBusy(1)
-	    self.activeAccount.getPublic(auto=autoval, older=get_older, get_count=more)
-	    self.ui.showBusy(-1)
+        self.ui.showBusy(1)
+        self.establish_connection()
+        self.activeAccount.getPublic(auto=autoval, older=get_older, get_count=more)
+        self.ui.showBusy(-1)
 
     def getSearchWrapper(self, get_older=False, autoval=None, more=0, *args):
         self.ui.showBusy(1)
+        self.establish_connection()
         if (autoval == 1):
             #if we manually his search get the latest content of the search box
             searchTerms = self.ui.getEntryText()
@@ -749,22 +878,30 @@ class Witter():
 
     def getFriendsWrapper(self, get_older=False, autoval=None, more=0, *args):
         self.ui.showBusy(1)
+        self.establish_connection()
         self.activeAccount.getFriends()
         self.ui.showBusy(-1)
 
 
     def getUserHistWrapper(self, get_older=False, autoval=None, more=0, *args):
         self.ui.showBusy(1)
+        self.establish_connection()
         user = self.ui.getEntryText()
         self.ui.set_title(self.serviceName + " " + user + " - History")
         self.activeAccount.getUserHistory(friend=user, auto=autoval)
         self.ui.setTweetText("")
         self.ui.showBusy(-1)
 
+    def followUserWrapper(self, get_older=False, more=0, autoval=None):
+        self.ui.showBusy(1)
+        self.establish_connection()
+        self.activeAcount.FollowUser(widget, self.reply_to_name)
+        self.ui.showBusy(-1)
 
 
     def getTrendsWrapper(self, get_older=False, autoval=None, more=0, *args):
         self.ui.showBusy(1)
+        self.establish_connection()
         self.activeAccount.getTrends()
         self.ui.showBusy(-1)
         return "done"
@@ -932,7 +1069,83 @@ class Witter():
                 self.accounts.remove(account)
                 self.config.accountList.remove(account.getAccountData())
 
+    def cb_switch_view(self, interface, method, args, user_data):
+         if method == 'open_mentions':
+            self.ui.switchViewTo(self.ui.treeview,"mentions")
+            self.ui.window.show()
+            #self.ui.window.fullscreen()
+            #self.ui.window.setActiveWindow()
 
+         if method == 'open_dm':
+            self.ui.switchViewTo(self.ui.treeview,"direct")
+            self.ui.window.show()
+            #self.ui.window.fullscreen()
+            
+            #self.ui.window.setActiveWindow()
+            
+    def _on_orientation_signal(self, orientation, stand, face, x, y, z):
+         if (orientation == 'portrait'):
+            print "switching to portrait"
+            self.ui.orientation=orientation
+            self.ui.cell.set_property('wrap-width', 400)
+            self.ui.icon_size = 30
+            self.ui.load_theme_icons()
+            self.ui.define_ui_buttons()
+            
+         if (orientation == 'landscape'):
+            print "switching to landscape"
+            self.ui.orientation=orientation
+            self.ui.cell.set_property('wrap-width', 730)
+            self.ui.icon_size = 48
+            self.ui.load_theme_icons()
+            self.ui.define_ui_buttons()
+            self.ui.hide_portrait_keyboard()
+         print "refresh current view"
+         curView = self.ui.getCurrentView()  
+         if (curView == self.ui.TIMELINE_VIEW):
+            self.ui.switch_view_to("timeline")
+         elif (curView == self.ui.DM_VIEW):
+            self.ui.switch_view_to("direct")
+         elif (curView == self.ui.MENTIONS_VIEW):
+            self.ui.switch_view_to("mentions")
+         elif (curView == self.ui.PUBLIC_VIEW):
+            self.ui.switch_view_to("public")
+         elif (curView == self.ui.TRENDS_VIEW):
+            self.ui.switch_view_to("trends")
+         elif (curView == self.ui.FRIENDS_VIEW):
+            self.ui.switch_view_to("friends")
+         elif (curView == self.ui.SEARCH_VIEW):
+            self.ui.switch_view_to("search")
+         elif (curView == self.ui.USERHIST_VIEW):
+            self.ui.switch_view_to("user")
+            
+    def establish_connection(self):
+        magic = 0xAA55 
+        connection = conic.Connection()
+        connection.connect("connection-event", self.connection_cb, magic)
+
+        # The request_connection method should be called to initialize
+        # some fields of the instance
+        assert(connection.request_connection(conic.CONNECT_FLAG_NONE)) 
+        
+    def connection_cb(self, connection, event, magic):
+        print "connection_cb(%s, %s, %x)" % (connection, event, magic)
+ 	
+        status = event.get_status()
+        error = event.get_error()
+        iap_id = event.get_iap_id()
+        bearer = event.get_bearer_type()
+ 	
+        if status == conic.STATUS_CONNECTED:
+            print "(CONNECTED (%s, %s, %i, %i)" % \
+            (iap_id, bearer, status, error)
+        elif status == conic.STATUS_DISCONNECTED:
+            print "(DISCONNECTED (%s, %s, %i, %i)" % \
+            (iap_id, bearer, status, error)
+        elif status == conic.STATUS_DISCONNECTING:
+            print "(DISCONNECTING (%s, %s, %i, %i)" % \
+            (iap_id, bearer, status, error) 
+            
     def getVersion(self):
         return self.version
 
