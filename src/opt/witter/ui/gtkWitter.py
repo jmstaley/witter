@@ -81,7 +81,7 @@ class WitterUI():
             "newTweet" : controller.enterPressed,
             "getTweets" : controller.updateSelectedView,
             "storecreds" : controller.store_creds,
-            "getacesstoken" : controller.getAccessToken,
+            "getaccesstoken" : controller.getAccessToken,
             "on_timeline_clicked" : self.switchView,
             "on_mentions_clicked" : self.switchView,
             "on_direct_messages_clicked" : self.switchView,
@@ -384,6 +384,8 @@ class WitterUI():
         self.tlpixbuf_off  = self.tlpixbuf_off.scale_simple(self.icon_size, self.icon_size, gtk.gdk.INTERP_BILINEAR)
         self.tlpixbuf_on = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.theme + "/timeline.png")
         self.tlpixbuf_on  = self.tlpixbuf_on.scale_simple(self.icon_size, self.icon_size, gtk.gdk.INTERP_BILINEAR)
+        tl_MapMask = self.tlpixbuf_on.render_pixmap_and_mask()
+        self.Mask = tl_MapMask[1]
         
         self.menpixbuf_off = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.theme + "/mention_off.png")
         self.menpixbuf_off  = self.menpixbuf_off.scale_simple(self.icon_size, self.icon_size, gtk.gdk.INTERP_BILINEAR)
@@ -453,7 +455,8 @@ class WitterUI():
         tlImage.set_from_pixbuf(self.tlpixbuf_off)
         tlImage.show()
         timelineButton.set_size_request(self.viewbutton_width,self.viewbutton_depth)
-
+        hbox2 = self.builder.get_object("hbox2")     
+        hbox2.shape_combine_mask(self.Mask,0,0)
         timelineButton.set_image(tlImage)
         mentionsButton = self.builder.get_object("mentions")
         
@@ -1599,6 +1602,11 @@ class WitterUI():
        gbutton.set_active(self.gesture_enabled)
        gbutton.connect("toggled", self.gesture_button_toggled)
 
+       gbutton2 = hildon.CheckButton(gtk.HILDON_SIZE_AUTO)
+       gbutton2.set_name("HildonButton-thumb")
+       gbutton2.set_label("Email style notifications")
+       gbutton2.set_active(self.controller.emailnotifications)
+       gbutton2.connect("toggled", self.notification_button_toggled)
        vbox = gtk.VBox(False, 0)
        vbox.pack_start(bitlyId, True, True, 0)
        vbox.pack_start(bitlyEntry, True, True, 0)
@@ -1612,7 +1620,7 @@ class WitterUI():
 
        vbox.pack_start(picker_button, True, True, 0)
        vbox.pack_start(gbutton, True, True, 0)
-
+       vbox.pack_start(gbutton2, True, True, 0)
 
        pannedArea.add_with_viewport(vbox)
 
@@ -1628,6 +1636,14 @@ class WitterUI():
         else:
             print "gestures off"
             self.gesture_enabled = False
+    def notification_button_toggled(self,checkbutton):
+        if (checkbutton.get_active()):
+            print "email style notifications on"
+            self.controller.emailnotifications = True
+        else:
+            print "email style notifications off"
+            self.controller.emailnotifications = False
+
 
     def create_theme_selector(self):
        selector = hildon.TouchSelector(text=True)

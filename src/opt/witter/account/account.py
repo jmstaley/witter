@@ -212,43 +212,46 @@ class account():
                     rtdata = self.api.GetRetweets_to_user(max_id=self.accountdata.oldest_id, count=get_count)
             data += rtdata
             for x in data:
-                 if (self.accountdata.last_id != None):
-                    if (x.id == self.accountdata.last_id):
-                        continue
-                 if (None != x.in_reply_to_status_id):
-                    print "reply to " + x.in_reply_to_screen_name
-                    #we don't want anything showing up if there is no reply_to, so all teh formatting is held here including the newline
-                    reply_to = "In reply to: " + x.in_reply_to_screen_name + " - " + self.get_specific_tweet(x.in_reply_to_screen_name, x.in_reply_to_status_id)
+                 if (self.checkStoreForTweet(long(x.id),self.tweetstore)):
+                     print "Tweet already in store"
                  else:
-                    reply_to = ""
+                     if (self.accountdata.last_id != None):
+                        if (x.id == self.accountdata.last_id):
+                            continue
+                     if (None != x.in_reply_to_status_id):
+                        print "reply to " + x.in_reply_to_screen_name
+                        #we don't want anything showing up if there is no reply_to, so all teh formatting is held here including the newline
+                        reply_to = "In reply to: " + x.in_reply_to_screen_name + " - " + self.get_specific_tweet(x.in_reply_to_screen_name, x.in_reply_to_status_id)
+                     else:
+                        reply_to = ""
 
-                 reply_to = reply_to.replace("&", "&amp;")
-                 #need to store id numbers for oldest/newest
-                 if self.accountdata.last_id == None:
-                    self.accountdata.last_id = x.id
-                 else:
-                    #if we have an id stored, check if this one is 'newer' if so then store it
-                    if long(self.accountdata.last_id) < long(x.id):
+                     reply_to = reply_to.replace("&", "&amp;")
+                     #need to store id numbers for oldest/newest
+                     if self.accountdata.last_id == None:
                         self.accountdata.last_id = x.id
+                     else:
+                        #if we have an id stored, check if this one is 'newer' if so then store it
+                        if long(self.accountdata.last_id) < long(x.id):
+                            self.accountdata.last_id = x.id
 
-                 #also want to track the oldest we get hold of
-                 if self.accountdata.oldest_id == None:
-                    self.accountdata.oldest_id = x.id
-                 else:
-                    if long(self.accountdata.oldest_id) > long(x.id):
+                     #also want to track the oldest we get hold of
+                     if self.accountdata.oldest_id == None:
                         self.accountdata.oldest_id = x.id
-                 #strip the source app name from the url
-                 source = self.getSourceAppname(x.source)
-                 text = self.escapeText(x.text)
-                 text = self.controller.expandBitlyUrls(text)
-                 pic = self.set_pic_for_id(str(x.user.GetId()), x.user.GetScreenName(), x.user.GetProfileImageUrl())
-                 created_at = self.parse_time(x.created_at)
-                 formatted_ts = self.format_timestamp(created_at)
-                 formatted_tweet = self.format_tweet(x.user.screen_name, text, formatted_ts, source, reply_to)
-                 longid= long(x.id)
-                 self.tweetstore.append([ "@" + x.user.screen_name, str(x.user.GetId()), "@" + x.user.screen_name + " : " + text, "", longid, "Tweet", x.created_at, reply_to, source, pic, formatted_tweet])
-                 
-                 receive_count = receive_count + 1
+                     else:
+                        if long(self.accountdata.oldest_id) > long(x.id):
+                            self.accountdata.oldest_id = x.id
+                     #strip the source app name from the url
+                     source = self.getSourceAppname(x.source)
+                     text = self.escapeText(x.text)
+                     text = self.controller.expandBitlyUrls(text)
+                     pic = self.set_pic_for_id(str(x.user.GetId()), x.user.GetScreenName(), x.user.GetProfileImageUrl())
+                     created_at = self.parse_time(x.created_at)
+                     formatted_ts = self.format_timestamp(created_at)
+                     formatted_tweet = self.format_tweet(x.user.screen_name, text, formatted_ts, source, reply_to)
+                     longid= long(x.id)
+                     self.tweetstore.append([ "@" + x.user.screen_name, str(x.user.GetId()), "@" + x.user.screen_name + " : " + text, "", longid, "Tweet", x.created_at, reply_to, source, pic, formatted_tweet])
+                     
+                     receive_count = receive_count + 1
 
             if (receive_count > 0):
                 note = osso.SystemNote(self.osso_c)
@@ -296,55 +299,60 @@ class account():
                     data = self.api.GetReplies(max_id=self.accountdata.oldest_mention_id, count=get_count)
 
             for x in data:
-                 if (self.accountdata.last_mention_id != None):
-                    if (x.id == self.accountdata.last_mention_id):
-                        continue
-                 if (None != x.in_reply_to_status_id):
-                    print "reply to " + x.in_reply_to_screen_name
-                    #we don't want anything showing up if there is no reply_to, so all teh formatting is held here including the newline
-                    reply_to = "In reply to: " + x.in_reply_to_screen_name + " - " + self.get_specific_tweet(x.in_reply_to_screen_name, x.in_reply_to_status_id)
+                 if (self.checkStoreForTweet(long(x.id),self.mentionstore)):
+                     print "Tweet already in store"
                  else:
-                    reply_to = ""
+                     if (self.accountdata.last_mention_id != None):
+                        if (x.id == self.accountdata.last_mention_id):
+                            continue
+                     if (None != x.in_reply_to_status_id):
+                        print "reply to " + x.in_reply_to_screen_name
+                        #we don't want anything showing up if there is no reply_to, so all teh formatting is held here including the newline
+                        reply_to = "In reply to: " + x.in_reply_to_screen_name + " - " + self.get_specific_tweet(x.in_reply_to_screen_name, x.in_reply_to_status_id)
+                     else:
+                        reply_to = ""
 
-                 reply_to = reply_to.replace("&", "&amp;")
-                 #need to store id numbers for oldest/newest
-                 if self.accountdata.last_mention_id == None:
-                    self.accountdata.last_mention_id = x.id
-                 else:
-                    #if we have an id stored, check if this one is 'newer' if so then store it
-                    if long(self.accountdata.last_mention_id) < long(x.id):
+                     reply_to = reply_to.replace("&", "&amp;")
+                     #need to store id numbers for oldest/newest
+                     if self.accountdata.last_mention_id == None:
                         self.accountdata.last_mention_id = x.id
+                     else:
+                        #if we have an id stored, check if this one is 'newer' if so then store it
+                        if long(self.accountdata.last_mention_id) < long(x.id):
+                            self.accountdata.last_mention_id = x.id
 
-                 #also want to track the oldest we get hold of
-                 if self.accountdata.oldest_mention_id == None:
-                    self.accountdata.oldest_mention_id = x.id
-                 else:
-                    if long(self.accountdata.oldest_mention_id) > long(x.id):
+                     #also want to track the oldest we get hold of
+                     if self.accountdata.oldest_mention_id == None:
                         self.accountdata.oldest_mention_id = x.id
-                 #strip the source app name from the url
-                 source = self.getSourceAppname(x.source)
-                 text = self.escapeText(x.text)
-                 text = self.controller.expandBitlyUrls(text)
-                 pic = self.set_pic_for_id(str(x.user.GetId()), x.user.GetScreenName(), x.user.GetProfileImageUrl())
-                 created_at = self.parse_time(x.created_at)
-                 formatted_ts = self.format_timestamp(created_at)
-                 formatted_tweet = self.format_tweet(x.user.screen_name, text, formatted_ts, source, reply_to)
-                 self.mentionstore.append([ "@" + x.user.screen_name, str(x.user.GetId()), "@" + x.user.screen_name + " : " + text, "", long(x.id), "Tweet", x.created_at, reply_to, source, pic, formatted_tweet])
-                 receive_count = receive_count + 1
+                     else:
+                        if long(self.accountdata.oldest_mention_id) > long(x.id):
+                            self.accountdata.oldest_mention_id = x.id
+                     #strip the source app name from the url
+                     source = self.getSourceAppname(x.source)
+                     text = self.escapeText(x.text)
+                     text = self.controller.expandBitlyUrls(text)
+                     pic = self.set_pic_for_id(str(x.user.GetId()), x.user.GetScreenName(), x.user.GetProfileImageUrl())
+                     created_at = self.parse_time(x.created_at)
+                     formatted_ts = self.format_timestamp(created_at)
+                     formatted_tweet = self.format_tweet(x.user.screen_name, text, formatted_ts, source, reply_to)
+                     self.mentionstore.append([ "@" + x.user.screen_name, str(x.user.GetId()), "@" + x.user.screen_name + " : " + text, "", long(x.id), "Tweet", x.created_at, reply_to, source, pic, formatted_tweet])
+                     receive_count = receive_count + 1
 
             if (receive_count > 0):
-                #note = osso.SystemNote(self.osso_c)
-                #result = note.system_note_infoprint(str(receive_count) + " Mentions Received")
-                n = pynotify.Notification("Witter","You have "+str(receive_count)+" new mentions")
-                n.set_urgency(pynotify.URGENCY_CRITICAL)
-                icon= gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/default/tweet.png")
-                #n.add_action("clicked","Show DMs", self.dm_callback)
-                n.set_hint("dbus-callback-default", "uk.wouldd.witter /uk/wouldd/witter uk.wouldd.witter open_mentions")
-                n.set_icon_from_pixbuf(icon)
-                rpc = osso.Rpc(self.osso_c)
-                rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._ENABLE_LED,rpc_args=(self._LED_PATTERN,"",""),use_system_bus=True)
-                rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._VIBRATE,rpc_args=(self._VIBRATE_PATTERN,"",""),use_system_bus=True)
-                #n.attach_to_widget(self.controller.ui.window)
+                if (self.controller.emailnotifications == False):
+                    note = osso.SystemNote(self.osso_c)
+                    result = note.system_note_infoprint(str(receive_count) + " Mentions Received")
+                else:
+                    n = pynotify.Notification("Witter","You have "+str(receive_count)+" new mentions")
+                    n.set_urgency(pynotify.URGENCY_CRITICAL)
+                    icon= gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/default/tweet.png")
+                    #n.add_action("clicked","Show DMs", self.dm_callback)
+                    n.set_hint("dbus-callback-default", "uk.wouldd.witter /uk/wouldd/witter uk.wouldd.witter open_mentions")
+                    n.set_icon_from_pixbuf(icon)
+                    rpc = osso.Rpc(self.osso_c)
+                    rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._ENABLE_LED,rpc_args=(self._LED_PATTERN,"",""),use_system_bus=True)
+                    rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._VIBRATE,rpc_args=(self._VIBRATE_PATTERN,"",""),use_system_bus=True)
+                    #n.attach_to_widget(self.controller.ui.window)
                 
                 n.show()
 
@@ -389,46 +397,51 @@ class account():
                     data = self.api.GetDirectMessages(max_id=self.accountdata.oldest_dm_id, count=get_count)
 
             for x in data:
-                 if (self.accountdata.last_dm_id != None):
-                    if (x.id == self.accountdata.last_dm_id):
-                        continue
-
-                 #need to store id numbers for oldest/newest
-                 if self.accountdata.last_dm_id == None:
-                    self.accountdata.last_dm_id = x.id
+                 if (self.checkStoreForTweet(long(x.id),self.dmstore)):
+                     print "Tweet already in store"
                  else:
-                    #if we have an id stored, check if this one is 'newer' if so then store it
-                    if long(self.accountdata.last_dm_id) < long(x.id):
+                     if (self.accountdata.last_dm_id != None):
+                        if (x.id == self.accountdata.last_dm_id):
+                            continue
+
+                     #need to store id numbers for oldest/newest
+                     if self.accountdata.last_dm_id == None:
                         self.accountdata.last_dm_id = x.id
+                     else:
+                        #if we have an id stored, check if this one is 'newer' if so then store it
+                        if long(self.accountdata.last_dm_id) < long(x.id):
+                            self.accountdata.last_dm_id = x.id
 
-                 #also want to track the oldest we get hold of
-                 if self.accountdata.oldest_dm_id == None:
-                    self.accountdata.oldest_dm_id = x.id
-                 else:
-                    if long(self.accountdata.oldest_dm_id) > long(x.id):
+                     #also want to track the oldest we get hold of
+                     if self.accountdata.oldest_dm_id == None:
                         self.accountdata.oldest_dm_id = x.id
-                 user = x.GetSenderScreenName()
-                 text = self.escapeText(x.text)
-                 text = self.controller.expandBitlyUrls(text)
-                 pic = self.set_pic_for_id(str(x.GetSenderId()), x.GetSenderScreenName(), "")
-                 created_at = self.parse_time(x.created_at)
-                 formatted_ts = self.format_timestamp(created_at)
-                 formatted_tweet = self.format_tweet(user, text, formatted_ts, None, None)
-                 self.dmstore.append([ "@" + user, x.GetSenderId(), "@" + user + " : " + text, "", long(x.id), "Tweet", x.created_at, "", "", pic, formatted_tweet])
-                 receive_count = receive_count + 1
+                     else:
+                        if long(self.accountdata.oldest_dm_id) > long(x.id):
+                            self.accountdata.oldest_dm_id = x.id
+                     user = x.GetSenderScreenName()
+                     text = self.escapeText(x.text)
+                     text = self.controller.expandBitlyUrls(text)
+                     pic = self.set_pic_for_id(str(x.GetSenderId()), x.GetSenderScreenName(), "")
+                     created_at = self.parse_time(x.created_at)
+                     formatted_ts = self.format_timestamp(created_at)
+                     formatted_tweet = self.format_tweet(user, text, formatted_ts, None, None)
+                     self.dmstore.append([ "@" + user, x.GetSenderId(), "@" + user + " : " + text, "", long(x.id), "Tweet", x.created_at, "", "", pic, formatted_tweet])
+                     receive_count = receive_count + 1
 
             if (receive_count > 0):
-                #note = osso.SystemNote(self.osso_c)
-                #result = note.system_note_infoprint(str(receive_count) + " DMs Received")
-                n = pynotify.Notification("Witter","You have "+str(receive_count)+" new DMs")
-                icon= gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/default/tweet.png")
-                n.set_icon_from_pixbuf(icon)                
-                n.set_urgency(pynotify.URGENCY_CRITICAL)
-                n.set_hint("dbus-callback-default", "uk.wouldd.witter /uk/wouldd/witter uk.wouldd.witter open_dm")
-                rpc = osso.Rpc(self.osso_c)
-                rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._ENABLE_LED,rpc_args=(self._LED_PATTERN,"",""),use_system_bus=True)
-                rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._VIBRATE,rpc_args=(self._VIBRATE_PATTERN,"",""),use_system_bus=True)
-                #dmnotify.add_action("clicked","Show DMs", self.dm_callback)
+                if (self.controller.emailnotifications == False):
+                    note = osso.SystemNote(self.osso_c)
+                    result = note.system_note_infoprint(str(receive_count) + " DMs Received")
+                else:
+                    n = pynotify.Notification("Witter","You have "+str(receive_count)+" new DMs")
+                    icon= gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/default/tweet.png")
+                    n.set_icon_from_pixbuf(icon)                
+                    n.set_urgency(pynotify.URGENCY_CRITICAL)
+                    n.set_hint("dbus-callback-default", "uk.wouldd.witter /uk/wouldd/witter uk.wouldd.witter open_dm")
+                    rpc = osso.Rpc(self.osso_c)
+                    rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._ENABLE_LED,rpc_args=(self._LED_PATTERN,"",""),use_system_bus=True)
+                    rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._VIBRATE,rpc_args=(self._VIBRATE_PATTERN,"",""),use_system_bus=True)
+                    #dmnotify.add_action("clicked","Show DMs", self.dm_callback)
 
                 #n.attach_to_widget(self.controller.ui.window)
                 n.show()
@@ -528,41 +541,44 @@ class account():
                     data = self.api.GetPublicTimeline(max_id=self.accountdata.oldest_public_id, count=get_count)
 
             for x in data:
-                 if (self.accountdata.last_public_id != None):
-                    if (x.id == self.accountdata.last_public_id):
-                        continue
-                 if (None != x.in_reply_to_status_id):
-                    print "reply to " + x.in_reply_to_screen_name
-                    #we don't want anything showing up if there is no reply_to, so all teh formatting is held here including the newline
-                    reply_to = "In reply to: " + x.in_reply_to_screen_name + " - " + self.get_specific_tweet(x.in_reply_to_screen_name, x.in_reply_to_status_id)
+                 if (self.checkStoreForTweet(long(x.id),self.publicstore)):
+                     print "Tweet already in store"
                  else:
-                    reply_to = ""
+                     if (self.accountdata.last_public_id != None):
+                        if (x.id == self.accountdata.last_public_id):
+                            continue
+                     if (None != x.in_reply_to_status_id):
+                        print "reply to " + x.in_reply_to_screen_name
+                        #we don't want anything showing up if there is no reply_to, so all teh formatting is held here including the newline
+                        reply_to = "In reply to: " + x.in_reply_to_screen_name + " - " + self.get_specific_tweet(x.in_reply_to_screen_name, x.in_reply_to_status_id)
+                     else:
+                        reply_to = ""
 
-                 reply_to = reply_to.replace("&", "&amp;")
-                 #need to store id numbers for oldest/newest
-                 if self.accountdata.last_public_id == None:
-                    self.accountdata.last_public_id = x.id
-                 else:
-                    #if we have an id stored, check if this one is 'newer' if so then store it
-                    if long(self.accountdata.last_public_id) < long(x.id):
+                     reply_to = reply_to.replace("&", "&amp;")
+                     #need to store id numbers for oldest/newest
+                     if self.accountdata.last_public_id == None:
                         self.accountdata.last_public_id = x.id
+                     else:
+                        #if we have an id stored, check if this one is 'newer' if so then store it
+                        if long(self.accountdata.last_public_id) < long(x.id):
+                            self.accountdata.last_public_id = x.id
 
-                 #also want to track the oldest we get hold of
-                 if self.accountdata.oldest_public_id == None:
-                    self.accountdata.oldest_public_id = x.id
-                 else:
-                    if long(self.accountdata.oldest_public_id) > long(x.id):
+                     #also want to track the oldest we get hold of
+                     if self.accountdata.oldest_public_id == None:
                         self.accountdata.oldest_public_id = x.id
-                 #strip the source app name from the url
-                 source = self.getSourceAppname(x.source)
-                 text = self.escapeText(x.text)
-                 text = self.controller.expandBitlyUrls(text)
-                 pic = self.set_pic_for_id(str(x.user.GetId()), x.user.GetScreenName(), x.user.GetProfileImageUrl())
-                 created_at = self.parse_time(x.created_at)
-                 formatted_ts = self.format_timestamp(created_at)
-                 formatted_tweet = self.format_tweet(x.user.screen_name, text, formatted_ts, source, reply_to)
-                 self.publicstore.append([ "@" + x.user.screen_name, x.user.GetId(), "@" + x.user.screen_name + " : " + text, "", long(x.id), "Tweet", x.created_at, reply_to, source, pic, formatted_tweet])
-                 receive_count = receive_count + 1
+                     else:
+                        if long(self.accountdata.oldest_public_id) > long(x.id):
+                            self.accountdata.oldest_public_id = x.id
+                     #strip the source app name from the url
+                     source = self.getSourceAppname(x.source)
+                     text = self.escapeText(x.text)
+                     text = self.controller.expandBitlyUrls(text)
+                     pic = self.set_pic_for_id(str(x.user.GetId()), x.user.GetScreenName(), x.user.GetProfileImageUrl())
+                     created_at = self.parse_time(x.created_at)
+                     formatted_ts = self.format_timestamp(created_at)
+                     formatted_tweet = self.format_tweet(x.user.screen_name, text, formatted_ts, source, reply_to)
+                     self.publicstore.append([ "@" + x.user.screen_name, x.user.GetId(), "@" + x.user.screen_name + " : " + text, "", long(x.id), "Tweet", x.created_at, reply_to, source, pic, formatted_tweet])
+                     receive_count = receive_count + 1
 
             if (receive_count > 0):
                 note = osso.SystemNote(self.osso_c)
@@ -593,37 +609,39 @@ class account():
             if (self.connect() != True):
                 return
         print "getting User history for " + friend
-        self.userhistorystore.clear()
+        #self.userhistorystore.clear()
         receive_count = 0
         try:
             #by default we get newer tweets
             data = self.api.GetUserTimeline(id=friend)
 
             for x in data:
-
-                 if (None != x.in_reply_to_status_id):
-                    print "reply to " + x.in_reply_to_screen_name
-                    #we don't want anything showing up if there is no reply_to, so all teh formatting is held here including the newline
-                    reply_to = "In reply to: " + x.in_reply_to_screen_name + " - " + self.get_specific_tweet(x.in_reply_to_screen_name, x.in_reply_to_status_id)
+                 if (self.checkStoreForTweet(long(x.id),self.userhistorystore)):
+                     print "Tweet already in store"
                  else:
-                    reply_to = ""
+                     if (None != x.in_reply_to_status_id):
+                        print "reply to " + x.in_reply_to_screen_name
+                        #we don't want anything showing up if there is no reply_to, so all teh formatting is held here including the newline
+                        reply_to = "In reply to: " + x.in_reply_to_screen_name + " - " + self.get_specific_tweet(x.in_reply_to_screen_name, x.in_reply_to_status_id)
+                     else:
+                        reply_to = ""
 
-                 reply_to = reply_to.replace("&", "&amp;")
+                     reply_to = reply_to.replace("&", "&amp;")
 
-                 #strip the source app name from the url
-                 source = self.getSourceAppname(x.source)
-                 text = self.escapeText(x.text)
-                 text = self.controller.expandBitlyUrls(text)
-                 pic = self.set_pic_for_id(str(x.user.GetId()), x.user.GetScreenName(), x.user.GetProfileImageUrl())
-                 created_at = self.parse_time(x.created_at)
-                 formatted_ts = self.format_timestamp(created_at)
-                 formatted_tweet = self.format_tweet(x.user.screen_name, text, formatted_ts, source, reply_to)
-                 self.userhistorystore.append([ "@" + x.user.screen_name, x.user.GetId(), "@" + x.user.screen_name + " : " + text, "", long(x.id), "Tweet", x.created_at, reply_to, source, pic, formatted_tweet])
-                 receive_count = receive_count + 1
+                     #strip the source app name from the url
+                     source = self.getSourceAppname(x.source)
+                     text = self.escapeText(x.text)
+                     text = self.controller.expandBitlyUrls(text)
+                     pic = self.set_pic_for_id(str(x.user.GetId()), x.user.GetScreenName(), x.user.GetProfileImageUrl())
+                     created_at = self.parse_time(x.created_at)
+                     formatted_ts = self.format_timestamp(created_at)
+                     formatted_tweet = self.format_tweet(x.user.screen_name, text, formatted_ts, source, reply_to)
+                     self.userhistorystore.append([ "@" + x.user.screen_name, x.user.GetId(), "@" + x.user.screen_name + " : " + text, "", long(x.id), "Tweet", x.created_at, reply_to, source, pic, formatted_tweet])
+                     receive_count = receive_count + 1
 
-            if (receive_count > 0):
-                note = osso.SystemNote(self.osso_c)
-                result = note.system_note_infoprint(str(receive_count) + " user timeline Received")
+                     if (receive_count > 0):
+                        note = osso.SystemNote(self.osso_c)
+                        result = note.system_note_infoprint(str(receive_count) + " user timeline Received")
 
         except IOError, e:
             print "error"
@@ -647,7 +665,7 @@ class account():
 
     def getSearch(self, searchTerms="", auto=0, older=False, get_count=20, * args):
         print "performing search"
-        self.searchstore.clear()
+        #self.searchstore.clear()
         receive_count = 0
         #when manually triggered use the current text in the entry field
         if (auto == 0):
@@ -678,21 +696,24 @@ class account():
 
                 results = data['results']
                 for x in results:
-                    reply_to = ""
-                    reply_to = reply_to.replace("&", "&amp;")
-                    text = self.escapeText(x['text'])
-                    text = self.controller.expandBitlyUrls(text)
-                    #strip the source app name from the url
-                    source = self.getSourceAppname(x['source'])
-                    print "search result from userid: " + str(x['from_user_id'])
-                    pic = self.get_pic_for_name(str(x['from_user']))
-                    created_at = self.parse_time(x['created_at'])
-                    formatted_ts = self.format_timestamp(created_at)
-                    formatted_tweet = self.format_tweet(x['from_user'], text, formatted_ts, source, reply_to)
-                    self.searchstore.append([ "@" + x['from_user'], str(x['from_user_id']), "@" + x['from_user'] + " : " + text, "", long(x['id']), "Search", x['created_at'], reply_to, source, pic, formatted_tweet])
-                    receive_count = receive_count + 1
-                    note = osso.SystemNote(self.osso_c)
-                    result = note.system_note_infoprint("Search results Received for : " + term)
+                    if (self.checkStoreForTweet(long(x['id']),self.searchstore)):
+                        print "Tweet already in store"
+                    else:
+                        reply_to = ""
+                        reply_to = reply_to.replace("&", "&amp;")
+                        text = self.escapeText(x['text'])
+                        text = self.controller.expandBitlyUrls(text)
+                        #strip the source app name from the url
+                        source = self.getSourceAppname(x['source'])
+                        print "search result from userid: " + str(x['from_user_id'])
+                        pic = self.get_pic_for_name(str(x['from_user']))
+                        created_at = self.parse_time(x['created_at'])
+                        formatted_ts = self.format_timestamp(created_at)
+                        formatted_tweet = self.format_tweet(x['from_user'], text, formatted_ts, source, reply_to)
+                        self.searchstore.append([ "@" + x['from_user'], str(x['from_user_id']), "@" + x['from_user'] + " : " + text, "", long(x['id']), "Search", x['created_at'], reply_to, source, pic, formatted_tweet])
+                        receive_count = receive_count + 1
+                        note = osso.SystemNote(self.osso_c)
+                        result = note.system_note_infoprint("Search results Received for : " + term)
             except IOError, e:
                 msg = 'Error retrieving search results '
                 if hasattr(e, 'reason'):
@@ -1178,3 +1199,17 @@ class account():
     def dm_callback(self, args):
         print "dms callback"
         self.controller.ui.switchViewTo(self.controller.ui.treeview,"direct")
+
+    def checkStoreForTweet(self, id, store):
+        #check if this id is already in our stores, if so return True
+        item = store.get_iter_first()
+        while item != None:
+            entryId = store.get_value(item, 4)
+            if (long(entryId) == id):
+                return True
+            item = store.iter_next(item)
+        return False    
+        
+    
+        
+        

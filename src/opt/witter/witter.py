@@ -141,7 +141,7 @@ class Witter():
         self.selectedUser = ""
         self.theme = "default"
         self.gestures = True
-
+        self.emailnotifications = True
         #
         #go read config file
         #
@@ -398,10 +398,18 @@ class Witter():
                 self.font_size = int(config.get("UI", "font_size"))
                 self.theme = config.get("UI", "theme")
                 gestures = config.get("UI","gestures_enabled")
-                if (gestures == 'True'):
+                emailnotifications = config.get("UI","notifications_enabled")
+                if (gestures == "True"):
                     self.gestures = True
+                    print "gestures enabled"
                 else:
-                    self.gestures= False
+                    self.gestures = False
+                    print "gestures disabled"
+                     
+                if (emailnotifications == "True"):
+                    self.emailnotifications = True
+                else:
+                    self.emailnotifications = False    
             except ConfigParser.NoSectionError:
                 print "no text colour setting"
             except ConfigParser.NoOptionError:
@@ -529,6 +537,10 @@ class Witter():
                 f.write("gestures_enabled = True\n")
             else:
                 f.write("gestures_enabled = False\n")
+            if self.emailnotifications:
+                f.write("notifications_enabled = True\n")
+            else:
+                f.write("notifications_enabled = False\n")
             f.write("[refresh_interval]\n")
             f.write("timeline = " + str(self.timelineRefreshInterval) + "\n")
             f.write("mentions = " + str(self.mentionsRefreshInterval) + "\n")
