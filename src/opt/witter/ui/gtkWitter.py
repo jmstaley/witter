@@ -69,7 +69,7 @@ class WitterUI():
         self.showingMore = False
         self.busyCounter = 0
         self.gesture_enabled=True
-        self.orientation='landscape'
+        self.orientation='Landscape'
         #Set the Glade file
         #self.gladefile = "/usr/share/witter/witter.glade"  
         #self.wTree = gtk.glade.XML(self.gladefile) 
@@ -137,31 +137,7 @@ class WitterUI():
         
 
 
-        plus20Button = self.builder.get_object("plus20")
         
-        plus50Button = self.builder.get_object("plus50")
-        plus100Button = self.builder.get_object("plus100")
-        plus200Button = self.builder.get_object("plus200")
-        
-        imageplus20 = gtk.Image()
-        imageplus20.set_from_file("/opt/witter/icons/" + self.theme + "/plus20.png")
-        imageplus20.show()
-        plus20Button.set_image(imageplus20)
-
-        imageplus50 = gtk.Image()
-        imageplus50.set_from_file("/opt/witter/icons/" + self.theme + "/plus50.png")
-        imageplus50.show()
-        plus50Button.set_image(imageplus50)
-
-        imageplus100 = gtk.Image()
-        imageplus100.set_from_file("/opt/witter/icons/" + self.theme + "/plus100.png")
-        imageplus100.show()
-        plus100Button.set_image(imageplus100)
-
-        imageplus200 = gtk.Image()
-        imageplus200.set_from_file("/opt/witter/icons/" + self.theme + "/plus200.png")
-        imageplus200.show()
-        plus200Button.set_image(imageplus200)
 
         okButton = self.builder.get_object("Ok")
         cancelButton = self.builder.get_object("Cancel")
@@ -181,10 +157,6 @@ class WitterUI():
         #unfollowbutton = self.builder.get_object("UnFollow")
         #usersTimelinebutton = self.builder.get_object("UsersTimeline")
 
-        plus20Button.set_name("HildonButton-finger")
-        plus50Button.set_name("HildonButton-finger")
-        plus100Button.set_name("HildonButton-finger")
-        plus200Button.set_name("HildonButton-finger")
         okButton.set_name("HildonButton-finger")
         cancelButton.set_name("HildonButton-finger")
         okoauthButton.set_name("HildonButton-thumb")
@@ -356,12 +328,21 @@ class WitterUI():
         self.treeview.set_reorderable(False)
         #with all that done I add the treeview to the scrolled window
         pannedWindow.add_with_viewport(self.treeview)
-
+        box = gtk.HBox()
+        one = hildon.Button(gtk.HILDON_SIZE_FINGER_HEIGHT,
+                                                      hildon.BUTTON_ARRANGEMENT_VERTICAL)
+        one.set_title('1')
+        one.connect("clicked", self.TypeLetter, "1")
+        one.show()
+        box.pack_start(one, expand=True)
+        box.show
+        print "adding button to panned area"
+        pannedWindow.add_with_viewport(box)
         pannedWindow.connect('horizontal-movement', self.gesture)
         pannedWindow.connect('vertical-movement', self.scrolling)
         #self.treeview.connect("button-press-event", self.build_menu, None);
         selection = self.treeview.get_selection()
-        #selection.connect('changed', self.build_menu)
+        selection.connect('changed', self.scrollToTweetCallback)
         #self.treeview.connect('row-activated', self.build_menu)
         self.treeview.connect('row-activated', self.build_stacked_menu)
         print "time to show the window"
@@ -380,6 +361,8 @@ class WitterUI():
 
 
     def load_theme_icons(self):
+        if (os.path.isdir("/opt/witter/icons/" + self.theme) != True):
+            self.theme = "default"
         self.tlpixbuf_off = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.theme + "/timeline_off.png")
         self.tlpixbuf_off  = self.tlpixbuf_off.scale_simple(self.icon_size, self.icon_size, gtk.gdk.INTERP_BILINEAR)
         self.tlpixbuf_on = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.theme + "/timeline.png")
@@ -436,6 +419,20 @@ class WitterUI():
         self.refreshpixbuf  = self.refreshpixbuf.scale_simple(self.icon_size, self.icon_size, gtk.gdk.INTERP_BILINEAR)
         self.tweetpixbuf = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.theme + "/tweet.png")
         self.tweetpixbuf = self.tweetpixbuf.scale_simple(self.icon_size, self.icon_size, gtk.gdk.INTERP_BILINEAR)
+        
+        self.plus20pixbuf = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.theme + "/plus20.png")
+        self.plus20pixbuf  = self.plus20pixbuf.scale_simple(self.icon_size, self.icon_size, gtk.gdk.INTERP_BILINEAR)
+        self.plus50pixbuf = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.theme + "/plus50.png")
+        self.plus50pixbuf = self.plus20pixbuf.scale_simple(self.icon_size, self.icon_size, gtk.gdk.INTERP_BILINEAR)
+        
+        self.plus100pixbuf = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.theme + "/plus100.png")
+        self.plus100pixbuf  = self.plus100pixbuf.scale_simple(self.icon_size, self.icon_size, gtk.gdk.INTERP_BILINEAR)
+        self.plus200pixbuf = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.theme + "/plus200.png")
+        self.plus200pixbuf = self.plus200pixbuf.scale_simple(self.icon_size, self.icon_size, gtk.gdk.INTERP_BILINEAR)
+        
+        print "pixbufs loaded for "+ self.theme+" theme" 
+        
+        
         
     def define_ui_buttons(self):
         refreshButton = self.builder.get_object("Refresh")
@@ -513,6 +510,33 @@ class WitterUI():
         image2.show()
         extraButton.set_size_request(self.viewbutton_width,self.viewbutton_depth)
         extraButton.set_image(image2)
+        
+        plus20Button = self.builder.get_object("plus20")
+        
+        plus50Button = self.builder.get_object("plus50")
+        plus100Button = self.builder.get_object("plus100")
+        plus200Button = self.builder.get_object("plus200")
+        plus20 = gtk.Image()
+        plus20.set_from_pixbuf(self.plus20pixbuf)
+        plus20.show()
+        plus20Button.set_image(plus20)
+        plus50 = gtk.Image()
+        plus50.set_from_pixbuf(self.plus50pixbuf)
+        plus50.show()
+        plus50Button.set_image(plus50)
+        plus100 = gtk.Image()
+        plus100.set_from_pixbuf(self.plus100pixbuf)
+        plus100.show()
+        plus100Button.set_image(plus100)
+        plus200 = gtk.Image()
+        plus200.set_from_pixbuf(self.plus200pixbuf)
+        plus200.show()
+        plus200Button.set_image(plus200)
+        plus20Button.set_name("HildonButton-finger")
+        plus50Button.set_name("HildonButton-finger")
+        plus100Button.set_name("HildonButton-finger")
+        plus200Button.set_name("HildonButton-finger")
+        
         refreshButton.set_name("HildonButton-finger")
         tweetButton.set_name("HildonButton-finger")
         timelineButton.set_name("HildonButton-finger")
@@ -600,6 +624,7 @@ class WitterUI():
     def on_key_press(self, widget, event, *args):
         #this picks up the press of the full screen key and toggles
         #from one mode to the other
+        #print "event key pressed" + str(event.keyval)
         curView = self.getCurrentView()
         if event.keyval == gtk.keysyms.F7:
             print "zoom in"
@@ -679,6 +704,10 @@ class WitterUI():
                 #when we toggle into fullscreen set the cell render wrap
                 #wider
                 self.cell.set_property('wrap-width', 630)
+        elif event.keyval == 65364:
+            print "scrolling down"
+        elif event.keyval == 65362:
+            print "scrolling up"
         else:
             self.builder.get_object("hbox1").show_all()
             self.builder.get_object("hbox2").show_all()
@@ -1191,6 +1220,9 @@ class WitterUI():
         except TypeError:
             print "couldn't scroll to item"
 
+    def scrollToTweetCallback(self, widget):
+        self.scrollToSelectedTweet()
+        
     def scrollToSelectedTweet(self):
         #get the selection
         self.scrollToItem(self.getSelectedTweet())
@@ -1595,6 +1627,19 @@ class WitterUI():
 
        # Attach callback to the "value-changed" signal
        picker_button.connect("value-changed", self.select_theme, selector)
+       
+       rotation_selector = self.create_rotation_selector()
+       rotation_picker = hildon.PickerButton(gtk.HILDON_SIZE_AUTO,
+                                           hildon.BUTTON_ARRANGEMENT_VERTICAL)
+       rotation_picker.set_name("HildonButton-thumb")
+       # Set a title to the button 
+       rotation_picker.set_title("Rotation Mode")
+
+       # Attach the touch selector to the picker button
+       rotation_picker.set_selector(rotation_selector)
+
+       # Attach callback to the "value-changed" signal
+       rotation_picker.connect("value-changed", self.select_rotation_theme, rotation_selector)
 
        gbutton = hildon.CheckButton(gtk.HILDON_SIZE_AUTO)
        gbutton.set_name("HildonButton-thumb")
@@ -1608,6 +1653,7 @@ class WitterUI():
        gbutton2.set_active(self.controller.emailnotifications)
        gbutton2.connect("toggled", self.notification_button_toggled)
        vbox = gtk.VBox(False, 0)
+       vbox.pack_start(rotation_picker,True,True,0)
        vbox.pack_start(bitlyId, True, True, 0)
        vbox.pack_start(bitlyEntry, True, True, 0)
        vbox.pack_start(bitlyPwd, True, True, 0)
@@ -1629,6 +1675,32 @@ class WitterUI():
 
        # This call show the window and also add the window to the stack
        win.show_all()
+       
+    def select_rotation_theme(self,widget, selector):
+        print "switching rotation mode to " + selector.get_current_text()
+        from portrait import FremantleRotation
+        if (selector.get_current_text() == 'Landscape'):
+            print "setting never rotate"
+            self.controller.rotation.set_mode(FremantleRotation.NEVER)
+            self.cell.set_property('wrap-width', 730)
+            self.icon_size = 48
+            self.load_theme_icons()
+            self.define_ui_buttons()
+            self.hide_portrait_keyboard()
+        elif (selector.get_current_text() == 'Portrait'):
+            print "setting always rotated"
+            self.controller.rotation.set_mode(FremantleRotation.ALWAYS)
+            self.cell.set_property('wrap-width', 400)
+            self.icon_size = 30
+            self.load_theme_icons()
+            self.define_ui_buttons()
+        elif (selector.get_current_text() == 'Automatic'):
+            print "setting automatic"
+            self.controller.rotation.set_mode(FremantleRotation.AUTOMATIC)
+        self.orientation = selector.get_current_text()
+
+        
+        
     def gesture_button_toggled(self,checkbutton):
         if (checkbutton.get_active()):
             print "gestures on"
@@ -1657,6 +1729,20 @@ class WitterUI():
        match_found = False
        # Populate model
        for item in theme_list:
+           selector.append_text(item)
+
+
+       selector.set_column_selection_mode(hildon.TOUCH_SELECTOR_SELECTION_MODE_SINGLE)
+       return selector
+   
+    def create_rotation_selector(self):
+       selector = hildon.TouchSelector(text=True)
+
+       # Stock icons will be used for the example
+       rotation_modes = ['Automatic', 'Landscape', 'Portrait']
+       
+       # Populate model
+       for item in rotation_modes:
            selector.append_text(item)
 
 

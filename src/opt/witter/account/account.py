@@ -23,6 +23,7 @@ import osso
 import hildon
 import urllib2
 import urllib
+import httplib
 import simplejson
 import bitly
 import accountData
@@ -199,8 +200,8 @@ class account():
                     rtdata = self.api.GetRetweets_to_user()
                 else:
                     print "refreshing since" + str(self.accountdata.last_id)
-                    data = self.api.GetFriendsTimeline(since_id=self.accountdata.last_id)
-                    rtdata = self.api.GetRetweets_to_user(since_id=self.accountdata.last_id)
+                    data = self.api.GetFriendsTimeline(since_id=self.accountdata.last_id, count=200)
+                    rtdata = self.api.GetRetweets_to_user(since_id=self.accountdata.last_id, count=200)
             else:
                 if self.accountdata.oldest_id == None:
                     data = self.api.GetFriendsTimeline(count=get_count)
@@ -275,6 +276,16 @@ class account():
                 note = osso.SystemNote(self.osso_c)
                 note.system_note_dialog(msg)
             print msg
+        except httplib.BadStatusLine:
+            print "Network error - BadStatusLine"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
+        except httplib.sslerror:
+            print "Network error - SslError"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
 
 
     def getMentions(self, auto=0, older=False, get_count=20, * args):
@@ -353,8 +364,7 @@ class account():
                     rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._ENABLE_LED,rpc_args=(self._LED_PATTERN,"",""),use_system_bus=True)
                     rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._VIBRATE,rpc_args=(self._VIBRATE_PATTERN,"",""),use_system_bus=True)
                     #n.attach_to_widget(self.controller.ui.window)
-                
-                n.show()
+                    n.show()
 
         except IOError, e:
             print "error"
@@ -374,7 +384,17 @@ class account():
                 note = osso.SystemNote(self.osso_c)
                 note.system_note_dialog(msg)
             print msg
-
+        except httplib.BadStatusLine:
+            print "Network error - BadStatusLine"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
+        except httplib.sslerror:
+            print "Network error - SslError"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
+                
     def getDMs(self, auto=0, older=False, get_count=20, * args):
         if (self.api == None):
             if (self.connect() != True):
@@ -463,8 +483,17 @@ class account():
                 note = osso.SystemNote(self.osso_c)
                 note.system_note_dialog(msg)
             print msg
-
-
+        except httplib.BadStatusLine:
+            print "Network error - BadStatusLine"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
+        except httplib.sslerror:
+            print "Network error - SslError"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
+                
     def getFriends(self, auto=0, older=False, get_count=20, * args):
         if (self.api == None):
             if (self.connect() != True):
@@ -518,7 +547,17 @@ class account():
                 note = osso.SystemNote(self.osso_c)
                 note.system_note_dialog(msg)
             print msg
-
+        except httplib.BadStatusLine:
+            print "Network error - BadStatusLine"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
+        except httplib.sslerror:
+            print "Network error - SslError"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
+                
     def getPublic(self, auto=0, older=False, get_count=20, * args):
         if (self.api == None):
             if (self.connect() != True):
@@ -602,7 +641,16 @@ class account():
                 note = osso.SystemNote(self.osso_c)
                 note.system_note_dialog(msg)
             print msg
-
+        except httplib.BadStatusLine:
+            print "Network error - BadStatusLine"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
+        except httplib.sslerror:
+            print "Network error - SslError"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
 
     def getUserHistory(self, friend="", auto=0, older=False, get_count=20, * args):
         if (self.api == None):
@@ -661,7 +709,16 @@ class account():
                 note = osso.SystemNote(self.osso_c)
                 note.system_note_dialog(msg)
             print msg
-
+        except httplib.BadStatusLine:
+            print "Network error - BadStatusLine"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
+        except httplib.sslerror:
+            print "Network error - SslError"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
 
     def getSearch(self, searchTerms="", auto=0, older=False, get_count=20, * args):
         print "performing search"
@@ -730,7 +787,17 @@ class account():
                 if (auto == 0):
                     note = osso.SystemNote(self.osso_c)
                     note.system_note_dialog(msg)
-
+            except httplib.BadStatusLine:
+                print "Network error - BadStatusLine"
+                if (auto == 0):
+                    note = osso.SystemNote(self.osso_c)
+                    note.system_note_dialog("Network error occured. Please try again")
+            except httplib.sslerror:
+                print "Network error - SslError"
+                if (auto == 0):
+                    note = osso.SystemNote(self.osso_c)
+                    note.system_note_dialog("Network error occured. Please try again")
+                
     def getTrends(self, *args):
 
         print "getting Trending topics"
@@ -767,8 +834,16 @@ class account():
                 msg = msg + 'Server returned ' + str(e.code) + " : " + reason
                 note = osso.SystemNote(self.osso_c)
                 note.system_note_dialog(msg)
-
-
+        except httplib.BadStatusLine:
+            print "Network error - BadStatusLine"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
+        except httplib.sslerror:
+            print "Network error - SslError"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
 
     def get_specific_tweet(self,username,tweet_id):
         try:
@@ -829,6 +904,18 @@ class account():
             note = osso.SystemNote(self.osso_c)
 
             result = note.system_note_infoprint(msg)
+            return False
+        except httplib.BadStatusLine:
+            print "Network error - BadStatusLine"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
+            return False
+        except httplib.sslerror:
+            print "Network error - SslError"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
             return False
 
     def FavouriteTweet(self, widget, id, *args):
@@ -963,6 +1050,16 @@ class account():
             note = osso.SystemNote(self.osso_c)
             note.system_note_dialog(msg)
             print msg
+        except httplib.BadStatusLine:
+            print "Network error - BadStatusLine"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
+        except httplib.sslerror:
+            print "Network error - SslError"
+            if (auto == 0):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("Network error occured. Please try again")
         
     def escapeText(self, text):
         #switch certain chars for escape sequences

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<svg
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   version="1.0"
+   width="48"
+   height="48"
+   id="svg2383">
+  <defs
+     id="defs2385">
+    <linearGradient
+       id="linearGradient2397">
+      <stop
+         id="stop2399"
+         style="stop-color:#6bd3ff;stop-opacity:1"
+         offset="0" />
+      <stop
+         id="stop2407"
+         style="stop-color:#0075b5;stop-opacity:1"
+         offset="1" />
+    </linearGradient>
+    <linearGradient
+       x1="29.746653"
+       y1="0.89062548"
+       x2="29.746653"
+       y2="36"
+       id="linearGradient2403"
+       xlink:href="#linearGradient2397"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(-6.1428572,5.8571429)" />
+  </defs>
+  <g
+     id="layer1">
+    <text
+       x="0.14285702"
+       y="41.857143"
+       id="text2393"
+       xml:space="preserve"
+       style="font-size:40px;font-style:normal;font-weight:normal;fill:url(#linearGradient2403);fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"><tspan
+         x="0.14285702"
+         y="41.857143"
+         id="tspan2395"
+         style="font-size:56px;fill:url(#linearGradient2403);fill-opacity:1">+</tspan></text>
+  </g>
+</svg>

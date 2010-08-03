@@ -77,7 +77,7 @@ class Witter():
     #first an init method to set everything up    
     def __init__(self):
         #version of witter
-        self.version = "0.3.4"
+        self.version = "0.3.5"
         #object holding witter config
         self.config = None
         #defaults for auto-refresh
@@ -142,6 +142,7 @@ class Witter():
         self.theme = "default"
         self.gestures = True
         self.emailnotifications = True
+        self.orientation = 'Landscape'
         #
         #go read config file
         #
@@ -180,6 +181,8 @@ class Witter():
         self.ui.load_theme_icons()
         self.ui.select_ui_theme(self.theme)
         self.ui.gesture_enabled = self.gestures
+        self.ui.orientation = self.orientation
+        
         self.gettingTweets = False
         if (self.activeAccount.getUsername() != "Username"):
             self.start_refresh_threads()
@@ -187,7 +190,17 @@ class Witter():
         #need to load all account references, and set the active account
         #
         from portrait import FremantleRotation
-        FremantleRotation("Witter", self.ui.window)
+        if ((self.orientation == 'Landscape') | (self.orientation == 'landscape')):
+            print "setting never rotate"
+            mymode = FremantleRotation.NEVER
+        elif ((self.orientation == 'Portrait') | (self.orientation == 'portrait')):
+            print "setting always rotated"
+            mymode =FremantleRotation.ALWAYS
+        elif ((self.orientation == 'Automatic') | (self.orientation == 'automatic')):
+            print "setting automatic"
+            mymode =FremantleRotation.AUTOMATIC
+        
+        self.rotation = FremantleRotation("Witter", self.ui.window, mode=mymode)
 
 
     def quit(self, *args):
@@ -398,6 +411,7 @@ class Witter():
                 self.font_size = int(config.get("UI", "font_size"))
                 self.theme = config.get("UI", "theme")
                 gestures = config.get("UI","gestures_enabled")
+                
                 emailnotifications = config.get("UI","notifications_enabled")
                 if (gestures == "True"):
                     self.gestures = True
@@ -409,7 +423,8 @@ class Witter():
                 if (emailnotifications == "True"):
                     self.emailnotifications = True
                 else:
-                    self.emailnotifications = False    
+                    self.emailnotifications = False
+                self.orientation = config.get("UI","orientation")    
             except ConfigParser.NoSectionError:
                 print "no text colour setting"
             except ConfigParser.NoOptionError:
@@ -440,6 +455,8 @@ class Witter():
     		    self.search_terms = config.get("search", "search_terms")
     	    except ConfigParser.NoSectionError:
     		    print "No refresh_interval section"
+            except ConfigParser.NoOptionError:
+                print "unknown option"
             try:
                 f = open('/home/user/.witteroauth')
                 self.access_token = pickle.load(f)
@@ -533,6 +550,7 @@ class Witter():
             f.write("bg_bottom = " + self.ui.bg_bottom_color.to_string() + "\n")
             f.write("font_size = " + str(self.font_size) + "\n")
             f.write("theme = " + self.ui.theme + "\n")
+            f.write("orientation = " + self.ui.orientation +"\n")
             if self.ui.gesture_enabled:
                 f.write("gestures_enabled = True\n")
             else:
@@ -599,6 +617,7 @@ class Witter():
                 f5.write("senderName" + str(counter) + " = " + store.get_value(item,0)+"\n")
                 f5.write("senderId" + str(counter) + " = " +store.get_value(item,1)+"\n")
                 tweet = store.get_value(item,2)
+                tweet = tweet.replace(";","&SC;")
                 tweet = tweet.replace("\n","&CR;")
                 f5.write("tweet" + str(counter) + " = " +tweet+"\n")
                 #3 is unused now, used to be tweet colour
@@ -632,6 +651,7 @@ class Witter():
                 senderId = config.get("tweets", "senderId" + str(counter));
                 tweet = config.get("tweets", "tweet" + str(counter));
                 tweet = tweet.replace("&CR;","\n")
+                tweet = tweet.replace("&SC;",";")
                 tweetId = config.get("tweets", "tweetId" + str(counter));
                 tweet_long_id = float(tweetId)
                 createdAt = config.get("tweets", "createdAt" + str(counter));
@@ -649,7 +669,7 @@ class Witter():
                     except gobject.GError:
                         #failed to load file, delete it, and go fetch a new one
                         print "corrupted avatar file found, deleting it"
-                        os.remove("/home/user/.witterPics/" + self.accountdata.servicename + "/" + filename)
+                        os.remove("/home/user/.witterPics/" + self.activeAccount.accountdata.servicename + "/" + filename)
                         print "bad file deleted, returning default icon"
                         avatar = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/default/tweet.png")
                 else:
@@ -785,6 +805,8 @@ class Witter():
             tweet = self.ui.getEntryText()
             #see if we have just an empty string (eg eroneous button press)
             if (tweet == ""):
+                note = osso.SystemNote(self.osso_c)
+                note.system_note_dialog("You must enter a message first")
                 print "No tweet to go with image"
                 return
 
@@ -811,6 +833,8 @@ class Witter():
             self.ui.setTweetText("")
             dialog.hide()
         except IOError:
+            note = osso.SystemNote(self.osso_c)
+            note.system_note_dialog("Failed to load selected image")
             print "couldn't read file"
         print file
 
@@ -1032,7 +1056,7 @@ class Witter():
                 shortUrl = bitlyapi.shorten(urlEntry.get_text())
                 #switch the long url in to the data
                 self.ui.appendTweetText(shortUrl)
-            except bitly.BitleyError:
+            except bitly.BitlyError:
                 print "bitly gave error response"
             except KeyError:
                 print "bitly gave key error response"
@@ -1096,17 +1120,17 @@ class Witter():
             #self.ui.window.setActiveWindow()
             
     def _on_orientation_signal(self, orientation, stand, face, x, y, z):
-         if (orientation == 'portrait'):
+         if ((orientation == 'portrait') & (self.ui.orientation != 'Landscape') ):
             print "switching to portrait"
-            self.ui.orientation=orientation
+            #self.ui.orientation=orientation
             self.ui.cell.set_property('wrap-width', 400)
             self.ui.icon_size = 30
             self.ui.load_theme_icons()
             self.ui.define_ui_buttons()
             
-         if (orientation == 'landscape'):
+         if ((orientation == 'landscape') & (self.ui.orientation != 'Portrait')):
             print "switching to landscape"
-            self.ui.orientation=orientation
+            #self.ui.orientation=orientation
             self.ui.cell.set_property('wrap-width', 730)
             self.ui.icon_size = 48
             self.ui.load_theme_icons()

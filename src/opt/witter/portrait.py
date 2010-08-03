@@ -108,10 +108,13 @@ class FremantleRotation(object):
                 # Remember the current "automatic" orientation for later
                 self._last_dbus_orientation = self._orientation
                 # Tell MCE that we don't need the accelerometer anymore
+                print "disabling accelerometer"
                 self._send_mce_request(self._DISABLE_ACCEL)
 
             if new_mode == self.NEVER:
+                print "trigger landscape orientation"
                 self._orientation_changed(self._LANDSCAPE)
+                self._send_mce_request(self._DISABLE_ACCEL)
             elif new_mode == self.ALWAYS and \
                     self._keyboard_state != self._KBD_OPEN:
                 self._orientation_changed(self._PORTRAIT)
@@ -119,6 +122,7 @@ class FremantleRotation(object):
                 # Restore the last-known "automatic" orientation
                 self._orientation_changed(self._last_dbus_orientation)
                 # Tell MCE that we need the accelerometer again
+                print "enabling accelerometer"
                 self._send_mce_request(self._ENABLE_ACCEL)
 
             self._mode = new_mode
@@ -159,7 +163,11 @@ class FremantleRotation(object):
             # Ignore repeated requests
             return
 
-        flags = hildon.PORTRAIT_MODE_SUPPORT
+        flags = 0
+
+        if orientation != self._LANDSCAPE:
+            flags |= hildon.PORTRAIT_MODE_SUPPORT
+            
         if orientation == self._PORTRAIT:
             flags |= hildon.PORTRAIT_MODE_REQUEST
 
