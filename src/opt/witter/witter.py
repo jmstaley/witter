@@ -77,7 +77,7 @@ class Witter():
     #first an init method to set everything up    
     def __init__(self):
         #version of witter
-        self.version = "0.3.5"
+        self.version = "0.3.7"
         #object holding witter config
         self.config = None
         #defaults for auto-refresh
@@ -98,6 +98,8 @@ class Witter():
         self.mentionrefresh = None
         self.publicrefresh = None
         self.searchrefresh = None
+        self.search_clear = False
+        self.filterList = []
         self.username = "UserName"
         self.password = ""
         self.bitlyusername = ""
@@ -141,6 +143,7 @@ class Witter():
         self.selectedUser = ""
         self.theme = "default"
         self.gestures = True
+        self.location = True
         self.emailnotifications = True
         self.orientation = 'Landscape'
         #
@@ -176,7 +179,7 @@ class Witter():
 
         #pass the witter ui a reference to this object for callbacks
         self.ui = ui.WitterUI(self)
-        self.ui.setActiveListStore(self.activeAccount.getTimeline(),4)
+        #self.ui.setActiveListStore(self.activeAccount.getTimeline(),4)
         self.ui.theme = self.theme
         self.ui.load_theme_icons()
         self.ui.select_ui_theme(self.theme)
@@ -201,7 +204,9 @@ class Witter():
             mymode =FremantleRotation.AUTOMATIC
         
         self.rotation = FremantleRotation("Witter", self.ui.window, mode=mymode)
-
+        self.profileUpdateThread = witter.RefreshTask(self.setProfile, 0, None)
+        self.profileUpdateThread.refresh()
+        
 
     def quit(self, *args):
         #this is our end method called when window is closed
@@ -220,6 +225,8 @@ class Witter():
 
     def updateSelectedView(self, *args):
         #call the get method for whichever liststore we're viewing
+        print "refreshing view"
+        print str(self.ui.getCurrentView())
         curView = self.ui.getCurrentView()
         if (curView == self.ui.TIMELINE_VIEW):
 
@@ -252,16 +259,18 @@ class Witter():
 	self.ui.hideBottomBar()
 	#self.builder.get_object("hbox2").hide_all()
 
-    def enterPressed(self, widget, *args):
+    def enterPressed(self, widget, tweetBox, *args):
         self.ui.showBusy(1)
         print "sending tweet"
-        result = self.activeAccount.newTweet(self.ui.getEntryText(), reply_to_name=self.reply_to_name, reply_to_id=self.reply_to)
+        tweetBuf = tweetBox.get_buffer()
+        tweet = tweetBuf.get_text(tweetBuf.get_start_iter(),tweetBuf.get_end_iter())
+        result = self.activeAccount.newTweet(tweet, reply_to_name=self.reply_to_name, reply_to_id=self.reply_to)
         print "Tweet Sent"
         if (result == True):
             print "Tweet successful"
             hildon.hildon_banner_show_information(self.ui.window, "", "Tweet Successful")
             #tweet successful, clear tweet text
-            self.ui.setTweetText("")
+            tweetBuf.set_text("")
     	    #if we were in the search view, we want to restore the search terms after a tweet
             if (self.ui.getCurrentView == self.ui.SEARCH_VIEW):
     		    self.ui.setTweetText(self.search_terms)
@@ -269,6 +278,8 @@ class Witter():
             print "Tweet Failed"
             hildon.hildon_banner_show_information(self.ui.window, "", "Tweet Failed")
         self.ui.showBusy(-1)
+        profileUpdateThread = witter.RefreshTask(self.setProfile, 0, None)
+        profileUpdateThread.refresh()
 
 
     def FollowTweetAuthor(self, widget):
@@ -430,6 +441,19 @@ class Witter():
             except ConfigParser.NoOptionError:
                 print "missing option in config"
             try:
+                loc = config.get("General","location")
+                if (loc == "True"):
+                    self.location = True
+                    print "tweet with location enabled"
+                else:
+                    self.location = False
+                    print "tweet with location disabled"
+            except ConfigParser.NoSectionError:
+                print "no location setting"
+            except ConfigParser.NoOptionError:
+                print "missing location option in config"
+                   
+            try:
                 serviceType = config.get("Service", "type")
                 if (serviceType == "twitter"):
                     self.serviceUrlRoot = self.twitterUrlRoot
@@ -452,9 +476,27 @@ class Witter():
     	    except ConfigParser.NoOptionError:
     		    print "unknown option"
     	    try:
-    		    self.search_terms = config.get("search", "search_terms")
+                self.search_terms = config.get("search", "search_terms")
+                search_clear = config.get("search", "search_clear")
+                if (search_clear == "True"):
+                    self.search_clear = True
+                    print "clear search results on new search enabled"
+                else:
+                    self.search_clear= False
+                    print "clear search results on new search disabled"
     	    except ConfigParser.NoSectionError:
     		    print "No refresh_interval section"
+            except ConfigParser.NoOptionError:
+                print "unknown option"
+            try:
+                counter=0
+                while True:
+                    self.filterList.append(config.get("filters", "filter"+str(counter)))
+                    counter = counter+1
+                
+                
+            except ConfigParser.NoSectionError:
+                print "No filters section"
             except ConfigParser.NoOptionError:
                 print "unknown option"
             try:
@@ -559,6 +601,8 @@ class Witter():
                 f.write("notifications_enabled = True\n")
             else:
                 f.write("notifications_enabled = False\n")
+            f.write("[General]\n")
+            f.write("location = " + str(self.location) +"\n")
             f.write("[refresh_interval]\n")
             f.write("timeline = " + str(self.timelineRefreshInterval) + "\n")
             f.write("mentions = " + str(self.mentionsRefreshInterval) + "\n")
@@ -567,7 +611,15 @@ class Witter():
             f.write("search = " + str(self.searchRefreshInterval) + "\n")
             f.write("[search]\n")
             f.write("search_terms = " + self.search_terms + "\n")
-            
+            if self.search_clear:
+                f.write("search_clear = True\n")
+            else:
+                f.write("search_clear = False\n")
+            f.write("[filters]\n")
+            counter=0
+            for filter in self.filterList:
+                f.write("filter"+str(counter)+" = " + filter+"\n")
+                counter = counter+1
     	except IOError, e:
     		print "failed to write config file"
         try:
@@ -597,7 +649,8 @@ class Witter():
                 f3.write("last_mention_id" + str(counter) + " = " + str(account.last_mention_id) + "\n")
 
                 counter = counter + 1
-
+            
+            
             print "written config object to file"
         except IOError, e:
             print "failed to write ConfigObject"
@@ -675,7 +728,7 @@ class Witter():
                 else:
                     avatar = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/default/tweet.png")
                 avatar = avatar.scale_simple(60, 60, gtk.gdk.INTERP_BILINEAR)
-                tweetstore.append([senderName,senderId,tweet,"",tweet_long_id,type,createdAt,replyTo,source,avatar,formattedTweet])
+                tweetstore.append([senderName,senderId,tweet,"",tweet_long_id,type,createdAt,replyTo,source,avatar,formattedTweet, True])
                 counter=counter+1
                 
                 
@@ -727,9 +780,12 @@ class Witter():
     def configOauth(self, widget, account, *args):
          try:
              twitter = oauthtwitter.OAuthApi(self.CONSUMER_KEY, self.CONSUMER_SECRET)
+             
              self.request_token = twitter.getRequestToken()
+             print "obtained oauth request_token"
+             print "requesting auth url"
              authorization_url = twitter.getAuthorizationURL(self.request_token)
-             print authorization_url
+             print "authorization url is " + authorization_url
              self.osso_rpc.rpc_run_with_defaults("osso_browser", "open_new_window", (authorization_url,))
              self.auth_account = account
              #ask the ui to prompt user to go to browser etc.
@@ -841,7 +897,8 @@ class Witter():
 
 
     def end_refresh_threads(self):
-	    #end all the refresh threads
+	    self.activeAccount.stop_Location()
+        #end all the refresh threads
 	    if (self.refreshtask != None):
 		self.refreshtask.stop()
 	    if (self.dmrefresh != None):
@@ -853,27 +910,45 @@ class Witter():
 	    if (self.searchrefresh != None):
 		self.searchrefresh.stop()
 
-
     def start_refresh_threads(self):
 	    #we store the refresh interval in minutes, but pass it through as a value in seconds
 	    #this method launches a thread for each of the views we want to have auto-refreshed
-	    if (self.timelineRefreshInterval != 0):
+        if (self.timelineRefreshInterval != 0):
 		    self.refreshtask = witter.RefreshTask(self.getTweetsWrapper, 0 , None)
 		    self.refreshtask.start(self.timelineRefreshInterval * 60, self)
-	    if (self.DMsRefreshInterval != 0):
+        if (self.DMsRefreshInterval != 0):
 		    self.dmrefresh = witter.RefreshTask(self.getDMsWrapper, 0, None)
 		    self.dmrefresh.start(self.DMsRefreshInterval * 60, self)
-	    if (self.mentionsRefreshInterval != 0):
+        if (self.mentionsRefreshInterval != 0):
 		    self.mentionrefresh = witter.RefreshTask(self.getMentionsWrapper, 0, None)
 		    self.mentionrefresh.start(self.mentionsRefreshInterval * 60, self)
-	    if (self.publicRefreshInterval != 0) :
+        if (self.publicRefreshInterval != 0) :
 		    self.publicrefresh = witter.RefreshTask(self.getPublicWrapper, 0, None)
 		    self.publicrefresh.start(self.publicRefreshInterval * 60, self)
-	    if (self.searchRefreshInterval != 0) :
+        if (self.searchRefreshInterval != 0) :
 		    self.searchrefresh = witter.RefreshTask(self.getSearchWrapper, 0, None)
 		    self.searchrefresh.start(self.searchRefreshInterval * 60, self)
-	    print "end refresh setup"
+        self.locationUpdateThread = witter.RefreshTask(self.startLocation, 0, None)
+        self.locationUpdateThread.refresh()
+        
+        if (self.location):    
+            print "location sharing enabled"
+            
+            self.activeAccount.start_Location()
+        else:
+            print "location sharing disabled"
+            while (self.activeAccount.locationSetup == False):
+                print "waiting for gps thread"
+                time.sleep(2)
+            self.activeAccount.stop_Location()
+            
+        print "end refresh setup"
 
+    def startLocation(self, get_older=False, more=0, autoval=None):
+        self.activeAccount.updateLocation()
+    def setProfile(self, get_older=False, more=0, autoval=None):
+        self.activeAccount.setProfileInfo()   
+        
     def getTweetsWrapper(self, get_older=False, more=0, autoval=None):
         self.ui.showBusy(1)
         self.establish_connection()
@@ -902,13 +977,17 @@ class Witter():
         self.activeAccount.getPublic(auto=autoval, older=get_older, get_count=more)
         self.ui.showBusy(-1)
 
-    def getSearchWrapper(self, get_older=False, autoval=None, more=0, *args):
+    def getSearchWrapper(self, get_older=False, autoval=None, searchTerms=None, more=0, *args):
         self.ui.showBusy(1)
         self.establish_connection()
-        if (autoval == 1):
-            #if we manually his search get the latest content of the search box
-            searchTerms = self.ui.getEntryText()
-        self.activeAccount.getSearch(auto=autoval, searchTerms=self.search_terms, older=get_older, get_count=more)
+        if searchTerms == None:
+            if (autoval == 1):
+                #if we manually his search get the latest content of the search box
+                searchTerms = self.ui.getEntryText()
+            else:
+                searchTerms = self.search_terms
+        print "calling getSearch with " + searchTerms
+        self.activeAccount.getSearch(auto=autoval, searchTerms=searchTerms, older=get_older, get_count=more)
         self.ui.showBusy(-1)
 
 
@@ -933,7 +1012,7 @@ class Witter():
         self.establish_connection()
         self.activeAcount.FollowUser(widget, self.reply_to_name)
         self.ui.showBusy(-1)
-
+  
 
     def getTrendsWrapper(self, get_older=False, autoval=None, more=0, *args):
         self.ui.showBusy(1)
@@ -942,8 +1021,12 @@ class Witter():
         self.ui.showBusy(-1)
         return "done"
 
-
-
+    
+    def searchWrapper(self, widget, searchTerms):
+        print searchTerms
+        refreshtask = witter.RefreshTask(self.getSearchWrapper, 0, None, search_terms=searchTerms)
+        print "refreshing search for " + refreshtask.search_terms
+        refreshtask.refresh()
 
     def getMore(self, more, *args):
         #call the get method for whichever liststore we're viewing
@@ -989,7 +1072,7 @@ class Witter():
         self.ui.showBusy(1)
         self.ui.hideActionButtons()
         self.ui.hideActionButtons()
-        self.ui.switchViewTo(widget, "user")
+        self.ui.toggle_view_to(widget, "user")
         self.ui.setTweetText(user)
 
         #need to strip the @ symbol from the user before we request their history
@@ -1067,32 +1150,7 @@ class Witter():
                 print "switching active account to " + account.getUsername()
                 self.activeAccount = account
                 self.ui.setWindowTitlePrefix("Witter(" + self.activeAccount.getUsername() + ")")
-                curView = self.ui.getCurrentView()
-                if (curView == self.ui.TIMELINE_VIEW):
-                    self.ui.setActiveListStore(self.activeAccount.getTimeline(),4)
-                    self.ui.setWindowTitle("Witter(" + self.activeAccount.getUsername() + ")" + " - timeline")
-                if (curView == self.ui.MENTIONS_VIEW):
-                    self.ui.setActiveListStore(self.activeAccount.getMentionsList(),4)
-                    self.ui.setWindowTitle("Witter(" + self.activeAccount.getUsername() + ")" + " - mentions")
-                if (curView == self.ui.DM_VIEW):
-                    self.ui.setActiveListStore(self.activeAccount.getDmsList(),4)
-                    self.ui.setWindowTitle("Witter(" + self.activeAccount.getUsername() + ")" + " - DMs")
-                if (curView == self.ui.SEARCH_VIEW):
-                    self.ui.setActiveListStore(self.activeAccount.getSearchList(),4)
-                    self.ui.setWindowTitle("Witter(" + self.activeAccount.getUsername() + ")" + " - search")
-                if (curView == self.ui.FRIENDS_VIEW):
-                    self.ui.setActiveListStore(self.activeAccount.getFriendsList(),0)
-                    self.ui.setWindowTitle("Witter(" + self.activeAccount.getUsername() + ")" + " - friends")
-                if (curView == self.ui.TRENDS_VIEW):
-                    self.ui.setActiveListStore(self.activeAccount.getTrendsList(),4)
-                    self.ui.setWindowTitle("Witter(" + self.activeAccount.getUsername() + ")" + " - trends")
-                if (curView == self.ui.PUBLIC_VIEW):
-                    self.ui.setActiveListStore(self.activeAccount.getPublicList(),4)
-                    self.ui.setWindowTitle("Witter(" + self.activeAccount.getUsername() + ")" + " - public")
-                if (curView == self.ui.USERHIST_VIEW):
-                    self.ui.setActiveListStore(self.activeAccount.getUserHistoryList(),4)
-                    self.ui.setWindowTitle("Witter(" + self.activeAccount.getUsername() + ")" + " - user history")
-
+                
 
 
     def addNewAccount(self, accountData):
@@ -1107,53 +1165,83 @@ class Witter():
 
     def cb_switch_view(self, interface, method, args, user_data):
          if method == 'open_mentions':
-            self.ui.switchViewTo(self.ui.treeview,"mentions")
+            self.ui.toggleviewto("mentions")
             self.ui.window.show()
             #self.ui.window.fullscreen()
             #self.ui.window.setActiveWindow()
 
          if method == 'open_dm':
-            self.ui.switchViewTo(self.ui.treeview,"direct")
+            self.ui.toggleviewto("direct")
             self.ui.window.show()
             #self.ui.window.fullscreen()
             
             #self.ui.window.setActiveWindow()
             
     def _on_orientation_signal(self, orientation, stand, face, x, y, z):
-         if ((orientation == 'portrait') & (self.ui.orientation != 'Landscape') ):
-            print "switching to portrait"
-            #self.ui.orientation=orientation
-            self.ui.cell.set_property('wrap-width', 400)
-            self.ui.icon_size = 30
-            self.ui.load_theme_icons()
-            self.ui.define_ui_buttons()
-            
-         if ((orientation == 'landscape') & (self.ui.orientation != 'Portrait')):
-            print "switching to landscape"
-            #self.ui.orientation=orientation
-            self.ui.cell.set_property('wrap-width', 730)
-            self.ui.icon_size = 48
-            self.ui.load_theme_icons()
-            self.ui.define_ui_buttons()
-            self.ui.hide_portrait_keyboard()
-         print "refresh current view"
-         curView = self.ui.getCurrentView()  
-         if (curView == self.ui.TIMELINE_VIEW):
-            self.ui.switch_view_to("timeline")
-         elif (curView == self.ui.DM_VIEW):
-            self.ui.switch_view_to("direct")
-         elif (curView == self.ui.MENTIONS_VIEW):
-            self.ui.switch_view_to("mentions")
-         elif (curView == self.ui.PUBLIC_VIEW):
-            self.ui.switch_view_to("public")
-         elif (curView == self.ui.TRENDS_VIEW):
-            self.ui.switch_view_to("trends")
-         elif (curView == self.ui.FRIENDS_VIEW):
-            self.ui.switch_view_to("friends")
-         elif (curView == self.ui.SEARCH_VIEW):
-            self.ui.switch_view_to("search")
-         elif (curView == self.ui.USERHIST_VIEW):
-            self.ui.switch_view_to("user")
+         
+         if (self.ui.activeWindow.get_is_topmost()):
+             if ((orientation == 'portrait') & (self.ui.current_orientation == 'landscape') ):
+                print "switching to portrait from " + self.ui.current_orientation
+                #self.ui.orientation=orientation
+                #self.ui.cell.set_property('wrap-width', 400)
+                
+                self.ui.icon_size = 30
+                self.ui.load_theme_icons()
+                self.ui.width=400
+                if ((self.ui.activeWin !="home") & (self.ui.activeWin != None)):
+                    
+                    self.ui.toggleviewto(self.ui.activeWin)
+                else:
+                    widgetList = self.ui.accountvbox.get_children()
+                    for widget in widgetList:
+                        self.ui.accountvbox.remove(widget)
+                    accounthbox = self.ui.account_summary()    
+                    self.ui.accountvbox.pack_start(accounthbox,expand=False)
+                    self.ui.accountvbox.show_all()
+                    self.activeAccount.setProfileInfo()
+                self.ui.current_orientation = 'portrait'
+                
+             if ((orientation == 'landscape') & (self.ui.current_orientation == 'portrait')):
+                print "switching to landscape from " + self.ui.current_orientation
+                #self.ui.orientation=orientation
+                #self.ui.cell.set_property('wrap-width', 730)
+                
+                self.ui.icon_size = 48
+                self.ui.load_theme_icons()
+                self.ui.define_ui_buttons()
+                self.ui.width=720
+                if ((self.ui.activeWin !="home") & (self.ui.activeWin != None)):
+                    self.ui.toggleviewto(self.ui.activeWin)
+                else:
+                    widgetList = self.ui.accountvbox.get_children()
+                    for widget in widgetList:
+                        self.ui.accountvbox.remove(widget)
+                    accounthbox = self.ui.account_summary()    
+                    self.ui.accountvbox.pack_start(accounthbox,expand=False)
+                    self.ui.accountvbox.show_all()
+                    self.activeAccount.setProfileInfo()
+                
+                self.ui.current_orientation = 'landscape'
+         else:
+            print "not top most window, not rotating"
+             #print "refresh current view"
+             #curView = self.ui.getCurrentView()  
+             #if (curView == self.ui.TIMELINE_VIEW):
+             #   self.ui.switch_view_to("timeline")
+             #elif (curView == self.ui.DM_VIEW):
+             #   self.ui.switch_view_to("direct")
+             #elif (curView == self.ui.MENTIONS_VIEW):
+             #   self.ui.switch_view_to("mentions")
+             #elif (curView == self.ui.PUBLIC_VIEW):
+             #   self.ui.switch_view_to("public")
+             #elif (curView == self.ui.TRENDS_VIEW):
+             #   self.ui.switch_view_to("trends")
+             #elif (curView == self.ui.FRIENDS_VIEW):
+             #   self.ui.switch_view_to("friends")
+             #elif (curView == self.ui.SEARCH_VIEW):
+             #   self.ui.switch_view_to("search")
+             #elif (curView == self.ui.USERHIST_VIEW):
+             #   self.ui.switch_view_to("user")
             
     def establish_connection(self):
         magic = 0xAA55 

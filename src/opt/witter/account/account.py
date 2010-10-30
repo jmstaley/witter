@@ -38,6 +38,8 @@ import locale
 import email.utils as eut
 import pynotify
 import dbus
+import location
+
 
 class account():
 
@@ -49,6 +51,12 @@ class account():
     INACTIVE = 2
     status = ""
     avatar_size = 60
+    friendCount = 0
+    lat=None
+    long = None
+    location = True
+    stopLocation=False
+    savedSearches =[]
     _MCE_SERVICE = 'com.nokia.mce'
     _MCE_REQUEST_PATH = '/com/nokia/mce/request'
     _MCE_REQUEST_IF = 'com.nokia.mce.request'
@@ -72,15 +80,17 @@ class account():
         self.controller = controller
         #these store all the data associated with this accounts tweets
         # the fields are : Name,sender_id,Tweet,TweetColour,id, type, timestamp, replyTo, source, pic, formatted_tweet
-        self.tweetstore = gtk.ListStore(str, str, str, str, float, str, str , str, str, gtk.gdk.Pixbuf, str)
+        self.tweetstore = gtk.ListStore(str, str, str, str, float, str, str , str, str, gtk.gdk.Pixbuf, str,bool)
+        self.filteredtweetstore = gtk.ListStore(str, str, str, str, float, str, str , str, str, gtk.gdk.Pixbuf, str,bool)
+        
         #then we want the same again to store dm's, mentions & pubilc timeline separately
-        self.dmstore = gtk.ListStore(str, str, str, str, float, str, str, str, str, gtk.gdk.Pixbuf, str)
-        self.mentionstore = gtk.ListStore(str, str, str, str, float, str, str, str, str, gtk.gdk.Pixbuf, str)
-        self.publicstore = gtk.ListStore(str, str, str, str, float, str, str, str, str, gtk.gdk.Pixbuf, str)
-        self.trendstore = gtk.ListStore(str, str, str, str, str, str, str, str, str, gtk.gdk.Pixbuf, str)
-        self.friendsstore = gtk.ListStore(str, str, str, str, float, str, str, str, str, gtk.gdk.Pixbuf, str)
-        self.searchstore = gtk.ListStore(str, str, str, str, float, str, str, str, str, gtk.gdk.Pixbuf, str)
-        self.userhistorystore = gtk.ListStore(str, str, str, str, float, str, str, str, str, gtk.gdk.Pixbuf, str)
+        self.dmstore = gtk.ListStore(str, str, str, str, float, str, str, str, str, gtk.gdk.Pixbuf, str,bool)
+        self.mentionstore = gtk.ListStore(str, str, str, str, float, str, str, str, str, gtk.gdk.Pixbuf, str,bool)
+        self.publicstore = gtk.ListStore(str, str, str, str, float, str, str, str, str, gtk.gdk.Pixbuf, str,bool)
+        self.trendstore = gtk.ListStore(str, str, str, str, str, str, str, str, str, gtk.gdk.Pixbuf, str,bool)
+        self.friendsstore = gtk.ListStore(str, str, str, str, float, str, str, str, str, gtk.gdk.Pixbuf, str,bool)
+        self.searchstore = gtk.ListStore(str, str, str, str, float, str, str, str, str, gtk.gdk.Pixbuf, str,bool)
+        self.userhistorystore = gtk.ListStore(str, str, str, str, float, str, str, str, str, gtk.gdk.Pixbuf, str,bool)
         #store of avatar, filename, access count
         self.avatars = gtk.ListStore(gtk.gdk.Pixbuf, str, int, str)
         #base url can be set to any twitter compatible site, so we can support mutliple account types
@@ -88,15 +98,44 @@ class account():
         self.osso_c = osso_c
         self.api = None
         self.connect()
+        self.locationSetup=False
         self.dmnotify = pynotify.Notification("Witter","You have new DMs")
         self.dmnotify.add_action("clicked","Show DMs", self.dm_callback)
+        #TODO move this and check if the call can be put on background thread from main loop
+        #self.updateLocation()
+        
+    def updateLocation(self):    
+        #start up location tracking
+        loop = gobject.MainLoop()
+        self.control = location.GPSDControl.get_default()
+        self.device = location.GPSDevice()
+        #|location.METHOD_AGNSS
+        self.control.set_properties(preferred_method=location.METHOD_ACWP|location.METHOD_GNSS,
+                       preferred_interval=location.INTERVAL_DEFAULT)
+ 
+        self.control.connect("error-verbose", self.on_error, loop)
+        self.device.connect("changed", self.on_changed, self.control)
+        self.control.connect("gpsd-stopped", self.on_stop, loop)
+ 
+        gobject.idle_add(self.start_location, self.control)
+        self.locationSetup=True
+        loop.run()
 
+    def stop_Location(self):
+        print "stop location tracking"
+        self.control.stop()
+
+    def start_Location(self):
+        print "start location tracking"
+        self.control.start()
+        
     def connect(self):
         if self.accountdata.password:
             print "Establishing api for " + self.accountdata.servicename + " using basic auth"
             self.api = twitter.Api(username=self.accountdata.username, password=self.accountdata.password)
             self.api.SetBaseUrl(self.accountdata.baseUrl)
             self.api.SetBaseSearchUrl(self.accountdata.searchUrl)
+            
         if (self.accountdata.access_token != None):
             print "Establishing api for " + self.accountdata.servicename + " using oauth"
             self.api = oauthtwitter.OAuthApi(self.CONSUMER_KEY, self.CONSUMER_SECRET, self.accountdata.access_token)
@@ -107,6 +146,56 @@ class account():
             print "Connection working ok"
             return True
 
+
+    def getProfileInfo(self, username):
+        print "getting profile info"
+        user = self.api.GetUser(username)
+        return user
+        
+    def setProfileInfo(self):
+        tryCount=0
+        #retry in the event of an error on the assumption it's transitory
+        while (tryCount<=5):
+            try:
+                user = self.getProfileInfo(self.accountdata.username)
+                self.controller.ui.profileTweetsLabel.set_markup("<span weight = 'bold' foreground=\"#6bd3ff\">TweetCount: </span>" +str(user.GetStatusesCount()))
+                self.controller.ui.profileFollowerCount.set_markup("<span weight = 'bold' foreground=\"#6bd3ff\">Followers: </span>"+str(user.GetFollowersCount()))
+                self.controller.ui.profileFollowingCount.set_markup("<span weight = 'bold' foreground=\"#6bd3ff\">Following: </span>" +str(user.GetFriendsCount()))
+                self.friendCount = user.GetFriendsCount()
+                self.controller.ui.accountNameLabel.set_markup(self.accountdata.username)
+                status = user.GetStatus()
+                print "formatting tweet"
+                source = self.getSourceAppname(status.GetSource())
+                formattedTweet =  self.format_tweet(user.GetName(), status.GetText(), status.GetCreatedAt(), source, status.GetInReplyToScreenName())
+                
+                self.controller.ui.profileLastTweet.set_markup("<span weight = 'bold' foreground=\"#6bd3ff\">Last Tweet: </span>" + formattedTweet)
+                
+                if (user.GetStatus().GetPlace() != None):
+                    self.controller.ui.profileLocation.set_markup("<span weight = 'bold' foreground=\"#6bd3ff\">Location: </span>" +user.GetStatus().GetPlace().name)
+                else:
+                    if (user.GetLocation() != None):
+                        self.controller.ui.profileLocation.set_markup("<span weight = 'bold' foreground=\"#6bd3ff\">Location: </span>" +user.GetLocation())
+                    
+                avatar, loaded = self.retrieve_avatar(user.GetProfileImageUrl(), str(user.id)+".jpg")   
+                avatar = avatar.scale_simple(90, 90, gtk.gdk.INTERP_BILINEAR)
+                #self.controller.ui.profileImage.set_from_file("/home/user/.witterPics/" + self.accountdata.servicename + "/" + str(user.id)+".jpg")
+                self.controller.ui.profileImage.set_from_pixbuf(avatar)  
+                self.getSavedSearches()
+                self.getLists()
+                return
+            except AttributeError, ae:
+                tryCount=tryCount+1
+                print "Failed to load profile info" 
+                print ae
+            except IOError, e:
+                tryCount = tryCount+1
+                print "error"
+                msg = 'Error retrieving tweets '
+        print "Failed to retrieve profile info after 5 attempts"
+            
+    def clearSearchResults(self):
+        self.searchstore.clear()
+            
     def getAccountData(self):
         return self.accountdata
 
@@ -192,101 +281,110 @@ class account():
         print "base url = " + self.accountdata.baseUrl
         print "base url of api object = " + self.api.GetBaseUrl()
         receive_count = 0
-        try:
-            #by default we get newer tweets
-            if (older == False):
-                if self.accountdata.last_id == None:
-                    data = self.api.GetFriendsTimeline()
-                    rtdata = self.api.GetRetweets_to_user()
+        tryCount=0
+        while (tryCount <5):
+            try:
+                #by default we get newer tweets
+                if (older == False):
+                    if self.accountdata.last_id == None:
+                        data = self.api.GetFriendsTimeline()
+                        rtdata = self.api.GetRetweets_to_user()
+                    else:
+                        print "refreshing since" + str(self.accountdata.last_id)
+                        data = self.api.GetFriendsTimeline(since_id=self.accountdata.last_id, count=200)
+                        rtdata = self.api.GetRetweets_to_user(since_id=self.accountdata.last_id, count=200)
                 else:
-                    print "refreshing since" + str(self.accountdata.last_id)
-                    data = self.api.GetFriendsTimeline(since_id=self.accountdata.last_id, count=200)
-                    rtdata = self.api.GetRetweets_to_user(since_id=self.accountdata.last_id, count=200)
-            else:
-                if self.accountdata.oldest_id == None:
-                    data = self.api.GetFriendsTimeline(count=get_count)
-                    print "fetching retweets to user"
-                    rtdata = self.api.GetRetweets_to_user(count=get_count)
-                else:
-                    print "refreshing retweets prior to" + str(self.accountdata.oldest_id)
-                    data = self.api.GetFriendsTimeline(max_id=self.accountdata.oldest_id, count=get_count)
-                    rtdata = self.api.GetRetweets_to_user(max_id=self.accountdata.oldest_id, count=get_count)
-            data += rtdata
-            for x in data:
-                 if (self.checkStoreForTweet(long(x.id),self.tweetstore)):
-                     print "Tweet already in store"
-                 else:
-                     if (self.accountdata.last_id != None):
-                        if (x.id == self.accountdata.last_id):
-                            continue
-                     if (None != x.in_reply_to_status_id):
-                        print "reply to " + x.in_reply_to_screen_name
-                        #we don't want anything showing up if there is no reply_to, so all teh formatting is held here including the newline
-                        reply_to = "In reply to: " + x.in_reply_to_screen_name + " - " + self.get_specific_tweet(x.in_reply_to_screen_name, x.in_reply_to_status_id)
-                     else:
-                        reply_to = ""
-
-                     reply_to = reply_to.replace("&", "&amp;")
-                     #need to store id numbers for oldest/newest
-                     if self.accountdata.last_id == None:
-                        self.accountdata.last_id = x.id
-                     else:
-                        #if we have an id stored, check if this one is 'newer' if so then store it
-                        if long(self.accountdata.last_id) < long(x.id):
-                            self.accountdata.last_id = x.id
-
-                     #also want to track the oldest we get hold of
-                     if self.accountdata.oldest_id == None:
-                        self.accountdata.oldest_id = x.id
-                     else:
-                        if long(self.accountdata.oldest_id) > long(x.id):
-                            self.accountdata.oldest_id = x.id
-                     #strip the source app name from the url
-                     source = self.getSourceAppname(x.source)
-                     text = self.escapeText(x.text)
-                     text = self.controller.expandBitlyUrls(text)
-                     pic = self.set_pic_for_id(str(x.user.GetId()), x.user.GetScreenName(), x.user.GetProfileImageUrl())
-                     created_at = self.parse_time(x.created_at)
-                     formatted_ts = self.format_timestamp(created_at)
-                     formatted_tweet = self.format_tweet(x.user.screen_name, text, formatted_ts, source, reply_to)
-                     longid= long(x.id)
-                     self.tweetstore.append([ "@" + x.user.screen_name, str(x.user.GetId()), "@" + x.user.screen_name + " : " + text, "", longid, "Tweet", x.created_at, reply_to, source, pic, formatted_tweet])
-                     
-                     receive_count = receive_count + 1
-
-            if (receive_count > 0):
-                note = osso.SystemNote(self.osso_c)
-                result = note.system_note_infoprint(str(receive_count) + " Tweets Received")
-                
-        except IOError, e:
-            print "error"
-            msg = 'Error retrieving tweets '
-            if hasattr(e, 'reason'):
-                msg = msg + str(e.reason)
-
-            if hasattr(e, 'code'):
-                if (e.code == 401):
-                    reason = "Not authorised: check uid/pwd"
-                elif(e.code == 503):
-                    reason = "Service unavailable"
-                else:
-                    reason = ""
-                msg = msg + 'Server returned ' + str(e.code) + " : " + reason
-            if (auto == 0):
-                note = osso.SystemNote(self.osso_c)
-                note.system_note_dialog(msg)
-            print msg
-        except httplib.BadStatusLine:
-            print "Network error - BadStatusLine"
-            if (auto == 0):
-                note = osso.SystemNote(self.osso_c)
-                note.system_note_dialog("Network error occured. Please try again")
-        except httplib.sslerror:
-            print "Network error - SslError"
-            if (auto == 0):
-                note = osso.SystemNote(self.osso_c)
-                note.system_note_dialog("Network error occured. Please try again")
-
+                    if self.accountdata.oldest_id == None:
+                        data = self.api.GetFriendsTimeline(count=get_count)
+                        print "fetching retweets to user"
+                        rtdata = self.api.GetRetweets_to_user(count=get_count)
+                    else:
+                        print "refreshing retweets prior to" + str(self.accountdata.oldest_id)
+                        data = self.api.GetFriendsTimeline(max_id=self.accountdata.oldest_id, count=get_count)
+                        rtdata = self.api.GetRetweets_to_user(max_id=self.accountdata.oldest_id, count=get_count)
+                data += rtdata
+                for x in data:
+                     if x != None:
+                         if (self.checkStoreForTweet(long(x.id),self.tweetstore)):
+                             print "Tweet already in store"
+                         else:
+                             if (self.accountdata.last_id != None):
+                                if (x.id == self.accountdata.last_id):
+                                    continue
+                             if (None != x.in_reply_to_status_id):
+                                print "reply to " + x.in_reply_to_screen_name
+                                #we don't want anything showing up if there is no reply_to, so all teh formatting is held here including the newline
+                                reply_to = "In reply to: " + x.in_reply_to_screen_name + " - " + self.get_specific_tweet(x.in_reply_to_screen_name, x.in_reply_to_status_id)
+                             else:
+                                reply_to = ""
+        
+                             reply_to = reply_to.replace("&", "&amp;")
+                             #need to store id numbers for oldest/newest
+                             if self.accountdata.last_id == None:
+                                self.accountdata.last_id = x.id
+                             else:
+                                #if we have an id stored, check if this one is 'newer' if so then store it
+                                if long(self.accountdata.last_id) < long(x.id):
+                                    self.accountdata.last_id = x.id
+        
+                             #also want to track the oldest we get hold of
+                             if self.accountdata.oldest_id == None:
+                                self.accountdata.oldest_id = x.id
+                             else:
+                                if long(self.accountdata.oldest_id) > long(x.id):
+                                    self.accountdata.oldest_id = x.id
+                             #strip the source app name from the url
+                             source = self.getSourceAppname(x.source)
+                             text = self.escapeText(x.text)
+                             text = self.controller.expandBitlyUrls(text)
+                             if (x.GetPlace() !=None):
+                                 place = x.GetPlace().name
+                             else:
+                                 place=None
+                             
+                             pic = self.set_pic_for_id(str(x.user.GetId()), x.user.GetScreenName(), x.user.GetProfileImageUrl())
+                             created_at = self.parse_time(x.created_at)
+                             formatted_ts = self.format_timestamp(created_at)
+                             formatted_tweet = self.format_tweet(x.user.screen_name, text, formatted_ts, source, reply_to, loc=place)
+                             longid= long(x.id)
+                             self.tweetstore.append([ "@" + x.user.screen_name, str(x.user.GetId()), "@" + x.user.screen_name + " : " + text, "", longid, "Tweet", x.created_at, reply_to, source, pic, formatted_tweet, True])
+                             
+                             receive_count = receive_count + 1
+    
+                if (receive_count > 0):
+                    note = osso.SystemNote(self.osso_c)
+                    result = note.system_note_infoprint(str(receive_count) + " Tweets Received")
+                return    
+            except IOError, e:
+                tryCount = tryCount+1
+                print "error"
+                msg = 'Error retrieving tweets '
+                if hasattr(e, 'reason'):
+                    msg = msg + str(e.reason)
+    
+                if hasattr(e, 'code'):
+                    if (e.code == 401):
+                        reason = "Not authorised: check uid/pwd"
+                    elif(e.code == 503):
+                        reason = "Service unavailable"
+                    else:
+                        reason = ""
+                    msg = msg + 'Server returned ' + str(e.code) + " : " + reason
+                print "get Tweets try : " + str(tryCount)+": " +msg
+                print "sleep for 1 second, then try again"
+                time.sleep(1)
+            except httplib.BadStatusLine:
+                tryCount = tryCount+1
+                msg ="Bad Status Line"
+                print "Network error - BadStatusLine"
+                print "sleep for 1 second, then try again"
+                time.sleep(1)
+        print "Failed to retrieve tweets after 5 attempts"
+        if (auto == 0):
+            note = osso.SystemNote(self.osso_c)
+            note.system_note_dialog(msg)
+        
+        
 
     def getMentions(self, auto=0, older=False, get_count=20, * args):
         if (self.api == None):
@@ -294,107 +392,111 @@ class account():
                 return
         print "getting mentions"
         receive_count = 0
-        try:
-            #by default we get newer tweets
-            if (older == False):
-                if self.accountdata.last_mention_id == None:
-                    data = self.api.GetReplies()
+        tryCount=0
+        while (tryCount <5):
+            try:
+                #by default we get newer tweets
+                if (older == False):
+                    if self.accountdata.last_mention_id == None:
+                        data = self.api.GetReplies()
+                    else:
+                        print "refreshing since" + str(self.accountdata.last_mention_id)
+                        data = self.api.GetReplies(since_id=self.accountdata.last_mention_id)
                 else:
-                    print "refreshing since" + str(self.accountdata.last_mention_id)
-                    data = self.api.GetReplies(since_id=self.accountdata.last_mention_id)
-            else:
-                if self.accountdata.oldest_mention_id == None:
-                    data = self.api.GetReplies(count=get_count)
-                else:
-                    print "refreshing prior to" + str(self.accountdata.oldest_mention_id)
-                    data = self.api.GetReplies(max_id=self.accountdata.oldest_mention_id, count=get_count)
-
-            for x in data:
-                 if (self.checkStoreForTweet(long(x.id),self.mentionstore)):
-                     print "Tweet already in store"
-                 else:
-                     if (self.accountdata.last_mention_id != None):
-                        if (x.id == self.accountdata.last_mention_id):
-                            continue
-                     if (None != x.in_reply_to_status_id):
-                        print "reply to " + x.in_reply_to_screen_name
-                        #we don't want anything showing up if there is no reply_to, so all teh formatting is held here including the newline
-                        reply_to = "In reply to: " + x.in_reply_to_screen_name + " - " + self.get_specific_tweet(x.in_reply_to_screen_name, x.in_reply_to_status_id)
+                    if self.accountdata.oldest_mention_id == None:
+                        data = self.api.GetReplies(count=get_count)
+                    else:
+                        print "refreshing prior to" + str(self.accountdata.oldest_mention_id)
+                        data = self.api.GetReplies(max_id=self.accountdata.oldest_mention_id, count=get_count)
+    
+                for x in data:
+                     if (self.checkStoreForTweet(long(x.id),self.mentionstore)):
+                         print "Tweet already in store"
                      else:
-                        reply_to = ""
-
-                     reply_to = reply_to.replace("&", "&amp;")
-                     #need to store id numbers for oldest/newest
-                     if self.accountdata.last_mention_id == None:
-                        self.accountdata.last_mention_id = x.id
-                     else:
-                        #if we have an id stored, check if this one is 'newer' if so then store it
-                        if long(self.accountdata.last_mention_id) < long(x.id):
+                         if (self.accountdata.last_mention_id != None):
+                            if (x.id == self.accountdata.last_mention_id):
+                                continue
+                         if (None != x.in_reply_to_status_id):
+                            print "reply to " + x.in_reply_to_screen_name
+                            #we don't want anything showing up if there is no reply_to, so all teh formatting is held here including the newline
+                            reply_to = "In reply to: " + x.in_reply_to_screen_name + " - " + self.get_specific_tweet(x.in_reply_to_screen_name, x.in_reply_to_status_id)
+                         else:
+                            reply_to = ""
+    
+                         reply_to = reply_to.replace("&", "&amp;")
+                         #need to store id numbers for oldest/newest
+                         if self.accountdata.last_mention_id == None:
                             self.accountdata.last_mention_id = x.id
-
-                     #also want to track the oldest we get hold of
-                     if self.accountdata.oldest_mention_id == None:
-                        self.accountdata.oldest_mention_id = x.id
-                     else:
-                        if long(self.accountdata.oldest_mention_id) > long(x.id):
+                         else:
+                            #if we have an id stored, check if this one is 'newer' if so then store it
+                            if long(self.accountdata.last_mention_id) < long(x.id):
+                                self.accountdata.last_mention_id = x.id
+    
+                         #also want to track the oldest we get hold of
+                         if self.accountdata.oldest_mention_id == None:
                             self.accountdata.oldest_mention_id = x.id
-                     #strip the source app name from the url
-                     source = self.getSourceAppname(x.source)
-                     text = self.escapeText(x.text)
-                     text = self.controller.expandBitlyUrls(text)
-                     pic = self.set_pic_for_id(str(x.user.GetId()), x.user.GetScreenName(), x.user.GetProfileImageUrl())
-                     created_at = self.parse_time(x.created_at)
-                     formatted_ts = self.format_timestamp(created_at)
-                     formatted_tweet = self.format_tweet(x.user.screen_name, text, formatted_ts, source, reply_to)
-                     self.mentionstore.append([ "@" + x.user.screen_name, str(x.user.GetId()), "@" + x.user.screen_name + " : " + text, "", long(x.id), "Tweet", x.created_at, reply_to, source, pic, formatted_tweet])
-                     receive_count = receive_count + 1
-
-            if (receive_count > 0):
-                if (self.controller.emailnotifications == False):
+                         else:
+                            if long(self.accountdata.oldest_mention_id) > long(x.id):
+                                self.accountdata.oldest_mention_id = x.id
+                         #strip the source app name from the url
+                         source = self.getSourceAppname(x.source)
+                         text = self.escapeText(x.text)
+                         text = self.controller.expandBitlyUrls(text)
+                         pic = self.set_pic_for_id(str(x.user.GetId()), x.user.GetScreenName(), x.user.GetProfileImageUrl())
+                         created_at = self.parse_time(x.created_at)
+                         formatted_ts = self.format_timestamp(created_at)
+                         formatted_tweet = self.format_tweet(x.user.screen_name, text, formatted_ts, source, reply_to)
+                         self.mentionstore.append([ "@" + x.user.screen_name, str(x.user.GetId()), "@" + x.user.screen_name + " : " + text, "", long(x.id), "Tweet", x.created_at, reply_to, source, pic, formatted_tweet, True])
+                         receive_count = receive_count + 1
+    
+                if (receive_count > 0):
+                    if (self.controller.emailnotifications == False):
+                        note = osso.SystemNote(self.osso_c)
+                        result = note.system_note_infoprint(str(receive_count) + " Mentions Received")
+                    else:
+                        n = pynotify.Notification("Witter","You have "+str(receive_count)+" new mentions")
+                        n.set_urgency(pynotify.URGENCY_CRITICAL)
+                        icon= gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/default/tweet.png")
+                        #n.add_action("clicked","Show DMs", self.dm_callback)
+                        n.set_hint("dbus-callback-default", "uk.wouldd.witter /uk/wouldd/witter uk.wouldd.witter open_mentions")
+                        n.set_icon_from_pixbuf(icon)
+                        rpc = osso.Rpc(self.osso_c)
+                        rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._ENABLE_LED,rpc_args=(self._LED_PATTERN,"",""),use_system_bus=True)
+                        rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._VIBRATE,rpc_args=(self._VIBRATE_PATTERN,"",""),use_system_bus=True)
+                        #n.attach_to_widget(self.controller.ui.window)
+                        n.show()
+                return
+            except IOError, e:
+                tryCount=tryCount+1
+                print "error"
+                msg = 'Error retrieving mentions '
+                if hasattr(e, 'reason'):
+                    msg = msg + str(e.reason)
+    
+                if hasattr(e, 'code'):
+                    if (e.code == 401):
+                        reason = "Not authorised: check uid/pwd"
+                    elif(e.code == 503):
+                        reason = "Service unavailable"
+                    else:
+                        reason = ""
+                    msg = msg + 'Server returned ' + str(e.code) + " : " + reason
+                if (auto == 0):
                     note = osso.SystemNote(self.osso_c)
-                    result = note.system_note_infoprint(str(receive_count) + " Mentions Received")
-                else:
-                    n = pynotify.Notification("Witter","You have "+str(receive_count)+" new mentions")
-                    n.set_urgency(pynotify.URGENCY_CRITICAL)
-                    icon= gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/default/tweet.png")
-                    #n.add_action("clicked","Show DMs", self.dm_callback)
-                    n.set_hint("dbus-callback-default", "uk.wouldd.witter /uk/wouldd/witter uk.wouldd.witter open_mentions")
-                    n.set_icon_from_pixbuf(icon)
-                    rpc = osso.Rpc(self.osso_c)
-                    rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._ENABLE_LED,rpc_args=(self._LED_PATTERN,"",""),use_system_bus=True)
-                    rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._VIBRATE,rpc_args=(self._VIBRATE_PATTERN,"",""),use_system_bus=True)
-                    #n.attach_to_widget(self.controller.ui.window)
-                    n.show()
-
-        except IOError, e:
-            print "error"
-            msg = 'Error retrieving mentions '
-            if hasattr(e, 'reason'):
-                msg = msg + str(e.reason)
-
-            if hasattr(e, 'code'):
-                if (e.code == 401):
-                    reason = "Not authorised: check uid/pwd"
-                elif(e.code == 503):
-                    reason = "Service unavailable"
-                else:
-                    reason = ""
-                msg = msg + 'Server returned ' + str(e.code) + " : " + reason
-            if (auto == 0):
-                note = osso.SystemNote(self.osso_c)
-                note.system_note_dialog(msg)
-            print msg
-        except httplib.BadStatusLine:
-            print "Network error - BadStatusLine"
-            if (auto == 0):
-                note = osso.SystemNote(self.osso_c)
-                note.system_note_dialog("Network error occured. Please try again")
-        except httplib.sslerror:
-            print "Network error - SslError"
-            if (auto == 0):
-                note = osso.SystemNote(self.osso_c)
-                note.system_note_dialog("Network error occured. Please try again")
+                    note.system_note_dialog(msg)
+                print msg
+            except httplib.BadStatusLine:
+                tryCount=tryCount+1
+                msg ="Bad Status Line"
+                print "Network error - BadStatusLine"
+                print "sleep for 1 second, then try again"
+                time.sleep(1)
                 
+        if (auto == 0):
+          note = osso.SystemNote(self.osso_c)
+          note.system_note_dialog(msg)
+
+                 
     def getDMs(self, auto=0, older=False, get_count=20, * args):
         if (self.api == None):
             if (self.connect() != True):
@@ -445,7 +547,7 @@ class account():
                      created_at = self.parse_time(x.created_at)
                      formatted_ts = self.format_timestamp(created_at)
                      formatted_tweet = self.format_tweet(user, text, formatted_ts, None, None)
-                     self.dmstore.append([ "@" + user, x.GetSenderId(), "@" + user + " : " + text, "", long(x.id), "Tweet", x.created_at, "", "", pic, formatted_tweet])
+                     self.dmstore.append([ "@" + user, x.GetSenderId(), "@" + user + " : " + text, "", long(x.id), "Tweet", x.created_at, "", "", pic, formatted_tweet, True])
                      receive_count = receive_count + 1
 
             if (receive_count > 0):
@@ -488,12 +590,7 @@ class account():
             if (auto == 0):
                 note = osso.SystemNote(self.osso_c)
                 note.system_note_dialog("Network error occured. Please try again")
-        except httplib.sslerror:
-            print "Network error - SslError"
-            if (auto == 0):
-                note = osso.SystemNote(self.osso_c)
-                note.system_note_dialog("Network error occured. Please try again")
-                
+                 
     def getFriends(self, auto=0, older=False, get_count=20, * args):
         if (self.api == None):
             if (self.connect() != True):
@@ -503,32 +600,43 @@ class account():
         self.friendsstore.clear()
         try:
             #by default we get newer tweets
-            data = self.api.GetFriends()
-
-            if (data != None):
-                for x in data:
-                    #it's possible to follow someone that has never updated their status
-                    if (x.status != None):
-                        status = x.status.text
-                        tweettime = x.status.created_at
-                        source = x.status.source
-                    else:
-                        status = ""
-                        tweettime = ""
-                        status = ""
-                    status = self.escapeText(status)
-                    source = self.getSourceAppname(source)
-                    pic = self.set_pic_for_id(str(x.id), x.GetScreenName(), x.GetProfileImageUrl())
-                    created_at = self.parse_time(tweettime)
-                    formatted_ts = self.format_timestamp(created_at)
-                    formatted_tweet = self.format_tweet(x.screen_name, status, formatted_ts, source, None)
-                    self.friendsstore.append([ "@" + x.screen_name, str(x.id), "@" + x.screen_name + " : " + status, "", long(x.id), "friend", tweettime, "", source, pic, formatted_tweet])
-                    receive_count = receive_count + 1
-
-                if (receive_count > 0):
-                    note = osso.SystemNote(self.osso_c)
-                    result = note.system_note_infoprint(str(receive_count) + " Friends Received")
-
+            page=0
+            followers = self.friendCount
+            moreFriends=True
+            while (moreFriends):
+                data = self.api.GetFriends(page=page)
+                
+                if ((followers -100) > 0):
+                    page=page+1
+                else:
+                    moreFriends=False
+                if (data != None):
+                    for x in data:
+                        #it's possible to follow someone that has never updated their status
+                        if (x.status != None):
+                            status = x.status.text
+                            tweettime = x.status.created_at
+                            source = x.status.source
+                        else:
+                            status = ""
+                            tweettime = ""
+                            status = ""
+                        status = self.escapeText(status)
+                        source = self.getSourceAppname(source)
+                        pic = self.set_pic_for_id(str(x.id), x.GetScreenName(), x.GetProfileImageUrl())
+                        created_at = self.parse_time(tweettime)
+                        formatted_ts = self.format_timestamp(created_at)
+                        formatted_tweet = self.format_tweet(x.screen_name, status, formatted_ts, source, None)
+                        self.friendsstore.append([ "@" + x.screen_name, str(x.id), "@" + x.screen_name + " : " + status, "", long(x.id), "friend", tweettime, "", source, pic, formatted_tweet, True])
+                        receive_count = receive_count + 1
+    
+                    if (receive_count > 0):
+                        note = osso.SystemNote(self.osso_c)
+                        result = note.system_note_infoprint(str(receive_count) + " Friends Received")
+                    #update friend/follower counts etc
+                
+                followers = followers - receive_count
+                
         except IOError, e:
             print "error"
             msg = 'Error retrieving friends '
@@ -552,12 +660,8 @@ class account():
             if (auto == 0):
                 note = osso.SystemNote(self.osso_c)
                 note.system_note_dialog("Network error occured. Please try again")
-        except httplib.sslerror:
-            print "Network error - SslError"
-            if (auto == 0):
-                note = osso.SystemNote(self.osso_c)
-                note.system_note_dialog("Network error occured. Please try again")
-                
+        self.setProfileInfo()
+                 
     def getPublic(self, auto=0, older=False, get_count=20, * args):
         if (self.api == None):
             if (self.connect() != True):
@@ -616,7 +720,7 @@ class account():
                      created_at = self.parse_time(x.created_at)
                      formatted_ts = self.format_timestamp(created_at)
                      formatted_tweet = self.format_tweet(x.user.screen_name, text, formatted_ts, source, reply_to)
-                     self.publicstore.append([ "@" + x.user.screen_name, x.user.GetId(), "@" + x.user.screen_name + " : " + text, "", long(x.id), "Tweet", x.created_at, reply_to, source, pic, formatted_tweet])
+                     self.publicstore.append([ "@" + x.user.screen_name, x.user.GetId(), "@" + x.user.screen_name + " : " + text, "", long(x.id), "Tweet", x.created_at, reply_to, source, pic, formatted_tweet, True])
                      receive_count = receive_count + 1
 
             if (receive_count > 0):
@@ -646,12 +750,7 @@ class account():
             if (auto == 0):
                 note = osso.SystemNote(self.osso_c)
                 note.system_note_dialog("Network error occured. Please try again")
-        except httplib.sslerror:
-            print "Network error - SslError"
-            if (auto == 0):
-                note = osso.SystemNote(self.osso_c)
-                note.system_note_dialog("Network error occured. Please try again")
-
+       
     def getUserHistory(self, friend="", auto=0, older=False, get_count=20, * args):
         if (self.api == None):
             if (self.connect() != True):
@@ -684,7 +783,7 @@ class account():
                      created_at = self.parse_time(x.created_at)
                      formatted_ts = self.format_timestamp(created_at)
                      formatted_tweet = self.format_tweet(x.user.screen_name, text, formatted_ts, source, reply_to)
-                     self.userhistorystore.append([ "@" + x.user.screen_name, x.user.GetId(), "@" + x.user.screen_name + " : " + text, "", long(x.id), "Tweet", x.created_at, reply_to, source, pic, formatted_tweet])
+                     self.userhistorystore.append([ "@" + x.user.screen_name, x.user.GetId(), "@" + x.user.screen_name + " : " + text, "", long(x.id), "Tweet", x.created_at, reply_to, source, pic, formatted_tweet, True])
                      receive_count = receive_count + 1
 
                      if (receive_count > 0):
@@ -724,6 +823,10 @@ class account():
         print "performing search"
         #self.searchstore.clear()
         receive_count = 0
+        #if we're not getting older tweets then pay attention to whether we want to clear search results
+        if older==False:
+            if self.controller.search_clear:
+                self.searchstore.clear()
         #when manually triggered use the current text in the entry field
         if (auto == 0):
             searchTerms = self.controller.ui.getEntryText()
@@ -767,7 +870,7 @@ class account():
                         created_at = self.parse_time(x['created_at'])
                         formatted_ts = self.format_timestamp(created_at)
                         formatted_tweet = self.format_tweet(x['from_user'], text, formatted_ts, source, reply_to)
-                        self.searchstore.append([ "@" + x['from_user'], str(x['from_user_id']), "@" + x['from_user'] + " : " + text, "", long(x['id']), "Search", x['created_at'], reply_to, source, pic, formatted_tweet])
+                        self.searchstore.append([ "@" + x['from_user'], str(x['from_user_id']), "@" + x['from_user'] + " : " + text, "", long(x['id']), "Search", x['created_at'], reply_to, source, pic, formatted_tweet, True])
                         receive_count = receive_count + 1
                         note = osso.SystemNote(self.osso_c)
                         result = note.system_note_infoprint("Search results Received for : " + term)
@@ -797,6 +900,81 @@ class account():
                 if (auto == 0):
                     note = osso.SystemNote(self.osso_c)
                     note.system_note_dialog("Network error occured. Please try again")
+
+    def getLists(self, *args):
+        try:
+            listdata = self.api.GetLists(self.accountdata.username)
+            print listdata
+            lists = listdata['lists']
+            for list in lists:
+                print list['id']
+                print list['name']
+                print list['member_count']
+                membersData = self.api.GetListMembers(self.accountdata.username, list['id'])
+                #print listMembers
+                listMembers = membersData['users']
+                for user in listMembers:
+                    #print user
+                    print user['screen_name']
+        except IOError, e:
+            msg = 'Error retrieving lists and members results '
+            if hasattr(e, 'reason'):
+                msg = msg + str(e.reason)
+
+            if hasattr(e, 'code'):
+                if (e.code == 401):
+                    reason = "Not authorised: check uid/pwd"
+                elif(e.code == 503):
+                    reason = "Service unavailable"
+                else:
+                    reason = ""
+                msg = msg + 'Server returned ' + str(e.code) + " : " + reason
+            note = osso.SystemNote(self.osso_c)
+            note.system_note_dialog(msg)
+        except httplib.BadStatusLine:
+            print "Network error - BadStatusLine"
+            note = osso.SystemNote(self.osso_c)
+            note.system_note_dialog("Network error occured. Please try again")
+        
+            
+
+    def getSavedSearches(self, * args):
+        print "getting saved search terms"
+        #self.searchstore.clear()
+        self.savedSearches = []
+        #call search on each of the terms in the search str
+        try:
+            
+            data = self.api.GetSavedSearches()
+
+            
+            print data
+           
+            for x in data:
+                query = x['query']
+                print "found saved search: " + query
+                self.savedSearches.append(query)
+        except IOError, e:
+            msg = 'Error retrieving saved searches results '
+            if hasattr(e, 'reason'):
+                msg = msg + str(e.reason)
+
+            if hasattr(e, 'code'):
+                if (e.code == 401):
+                    reason = "Not authorised: check uid/pwd"
+                elif(e.code == 503):
+                    reason = "Service unavailable"
+                else:
+                    reason = ""
+                msg = msg + 'Server returned ' + str(e.code) + " : " + reason
+            note = osso.SystemNote(self.osso_c)
+            note.system_note_dialog(msg)
+        except httplib.BadStatusLine:
+            print "Network error - BadStatusLine"
+            note = osso.SystemNote(self.osso_c)
+            note.system_note_dialog("Network error occured. Please try again")
+        
+
                 
     def getTrends(self, *args):
 
@@ -874,18 +1052,45 @@ class account():
         #see if we have just an empty string (eg eroneous button press)
         if (tweet == ""):
             return False
-
+        if (self.controller.location & self.locationSetup):
+            if self.device:
+                if self.device.fix:
+                    if self.device.fix[1] & location.GPS_DEVICE_LATLONG_SET:
+                        print "lat = %f, long = %f" % self.device.fix[4:6]
+                        self.lat, self.long = self.device.fix[4:6]
+            
+        #if (self.controller.location):
+        #    self.updateLocation()
         try:
 
             if (reply_to_name != None):
                 if (re.search(reply_to_name, tweet)):
                     #this is a reply
-                    status = self.api.PostUpdate(tweet, reply_to_id)
+                    print "reply to " + reply_to_name
+                    if (self.controller.location):
+                        print "Tweeting with location info"
+                        print str(self.lat)
+                        print str(self.long)
+                        status = self.api.PostUpdate(tweet, reply_to_id, lat=self.lat, long=self.long)
+                    else:
+                        status = self.api.PostUpdate(tweet, reply_to_id)
+                else:
+                    if (self.controller.location):
+                        print "tweeting with location info"
+                        print str(self.lat)
+                        print str(self.long)
+                        
+                        status = self.api.PostUpdate(tweet, lat=self.lat, long=self.long)
+                    else:
+                        status = self.api.PostUpdate(tweet)
+            else:
+                if (self.controller.location):
+                    print "Tweeting with location info"
+                    print str(lat)
+                    print str(long)
+                    status = self.api.PostUpdate(tweet, lat=self.lat, long=self.long)
                 else:
                     status = self.api.PostUpdate(tweet)
-            else:
-                status = self.api.PostUpdate(tweet)
-
             return True
         except IOError, e:
             msg = 'Error posting tweet '
@@ -907,12 +1112,6 @@ class account():
             return False
         except httplib.BadStatusLine:
             print "Network error - BadStatusLine"
-            if (auto == 0):
-                note = osso.SystemNote(self.osso_c)
-                note.system_note_dialog("Network error occured. Please try again")
-            return False
-        except httplib.sslerror:
-            print "Network error - SslError"
             if (auto == 0):
                 note = osso.SystemNote(self.osso_c)
                 note.system_note_dialog("Network error occured. Please try again")
@@ -975,8 +1174,9 @@ class account():
                     created_at = self.parse_time(x.created_at)
                     formatted_ts = self.format_timestamp(created_at)
                     formatted_tweet = self.format_tweet(x.user.screen_name, text, formatted_ts, source, reply_to)
-                    self.tweetstore.append([ "@" + x.user.screen_name, x.user.GetId(), "@" + x.user.screen_name + " : " + text, "", long(x.id), "Tweet", x.created_at, reply_to, source, pic, formatted_tweet])
-                 
+                    self.tweetstore.append([ "@" + x.user.screen_name, x.user.GetId(), "@" + x.user.screen_name + " : " + text, "", long(x.id), "Tweet", x.created_at, reply_to, source, pic, formatted_tweet, True])
+                #update follower count
+                self.setProfileInfo()
         except IOError, e:
             print "error"
             msg = 'Error following ' + name + ' '
@@ -1005,6 +1205,8 @@ class account():
                 data = self.api.DestroyFriendship(name)
                 note = osso.SystemNote(self.osso_c)
                 result = note.system_note_infoprint("No longer following " + name)
+                #update following count
+                self.setProfileInfo()
         except IOError, e:
             print "error"
             msg = 'Error unfollowing ' + name + ' '
@@ -1158,7 +1360,7 @@ class account():
             return pixbuf, False
         return pixbuf, True
 
-    def format_tweet(self, user, tweet, time, source, reply_to):
+    def format_tweet(self, user, tweet, time, source, reply_to, loc=None):
         tweet = tweet.replace("&amp;", "&")
         tweet = gobject.markup_escape_text(tweet)
         if (source != None):
@@ -1172,7 +1374,7 @@ class account():
                     word = " <span foreground = \"#0075b5\">" + word[0:len(word)-1] + "</span>" + word[len(word)-1:len(word)]
                 else:
                     word = " <span foreground = \"#0075b5\">" + word + "</span>"
-            if (word.startswith("http:")):
+            if (word.startswith("http:") | word.startswith("www")):
                 word = "<span foreground=\"#0075b5\">" + word + "</span>"
             if (word.startswith("witter") | word.startswith("Witter") | word.startswith("#witter") | word.startswith("#Witter")):
                 word = "<span foreground=\"yellow\">" + word + "</span>"
@@ -1184,7 +1386,10 @@ class account():
         if (source != None):
             if (source.startswith("Witter")):
                 source = "<span foreground=\"yellow\">" + source + "</span>"
-            line = line + "\n<span weight='light' size='x-small'>" + time + " from " + source + "</span>"
+            if loc:
+                line = line + "\n<span weight='light' size='x-small'>" + time + " from " + source + " in " + loc + "</span>"
+            else:
+                line = line + "\n<span weight='light' size='x-small'>" + time + " from " + source + "</span>"
         else:
             line = line + "\n<span weight='light' size='x-small'>" + time + "</span>"
         return line
@@ -1305,8 +1510,68 @@ class account():
             if (long(entryId) == id):
                 return True
             item = store.iter_next(item)
-        return False    
-        
+        return False  
     
+    def filterTweets(self, sourceList, filter):   
+        temptweetstore = sourceList
+        item = temptweetstore.get_iter_first()
         
+        while item != None:
+            tweet = sourceList.get_value(item, 2)
+            tweet = tweet.lower()
+            filter = filter.lower()
+            if (tweet.find(filter) != -1):
+                print "filtering " + tweet
+                temptweetstore.set_value(item,11,False)
+            item = temptweetstore.iter_next(item)
+        return temptweetstore
+    
+    def unfilterTweets(self, sourceList, filter):   
+        temptweetstore = sourceList
+        item = temptweetstore.get_iter_first()
+        
+        while item != None:
+            tweet = sourceList.get_value(item, 2)
+            if (tweet.find(filter) != -1):
+                print "filtering " + tweet
+                temptweetstore.set_value(item,11,True)
+            item = temptweetstore.iter_next(item)
+        return temptweetstore
+    
+    def unfilterAllTweets(self, sourceList):   
+        temptweetstore = sourceList
+        item = temptweetstore.get_iter_first()
+        
+        while item != None:
+            tweet = sourceList.get_value(item, 2)
+            temptweetstore.set_value(item,11,True)
+            item = temptweetstore.iter_next(item)
+        return temptweetstore
+    
+    def on_error(self,control, error, data):
+        print "location error: %d... quitting" % error
+        data.quit()
+ 
+    def on_changed(self,device, data):
+        if self.stopLocation:
+            #stoppping location tracking
+            data.stop()
+            self.stopLocation = False
+        if not device:
+            return
+        if device.fix:
+            if device.fix[1] & location.GPS_DEVICE_LATLONG_SET:
+                #print "lat = %f, long = %f" % device.fix[4:6]
+                self.lat, self.long = device.fix[4:6]
+                #data.stop()
+    
+    def on_stop(self,control, data):
+        print "quitting"
+        data.quit()
+ 
+    def start_location(self,data):
+        data.start()
+        return False
+    
+    
         

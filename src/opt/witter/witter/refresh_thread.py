@@ -24,13 +24,16 @@ gtk.gdk.threads_init()
 class RefreshTask(object):
 
 
-   def __init__(self, callback, extraMsgs, loop_callback, complete_callback=None):
+   def __init__(self, callback, extraMsgs, loop_callback, search_terms=None,complete_callback=None):
        #takes in the method to call to get tweets, eg getTweets, getMentions ec
        self.callback = callback
        #and the call back to give updates on progress
        self.loop_callback = loop_callback
        #and something to tell when we're finished
        self.complete_callback = complete_callback
+       self.search_terms=search_terms
+       if search_terms !=None:
+           print "refresh thread primed with searchterms " + search_terms
        self._stopped = False
        self.extraMsgs = extraMsgs
 
@@ -64,9 +67,17 @@ class RefreshTask(object):
    def _refresh(self, *args):
 	   #just call the callback and end
        if (self.extraMsgs != 0):
-           self.callback(autoval=0, get_older=True, more=self.extraMsgs)
+           if (self.search_terms != None):
+               print "refresh specific search term" +self.search_terms
+               self.callback(autoval=1, get_older=True, more=self.extraMsgs, searchTerms=self.search_terms)
+           else:
+               self.callback(autoval=0, get_older=True, more=self.extraMsgs)
        else:
-           self.callback(autoval=0, get_older=False, more=self.extraMsgs)
+           if (self.search_terms != None):
+               print "refresh specific search term" +self.search_terms
+               self.callback(autoval=1, get_older=False, more=self.extraMsgs, searchTerms=self.search_terms)
+           else:
+               self.callback(autoval=0, get_older=False, more=self.extraMsgs)
 
    def refresh(self, *args, **kwargs):
 	   #used to do a single refresh in background thread

@@ -79,6 +79,7 @@ class Status(object):
                id=None,
                text=None,
                user=None,
+               place=None,
                in_reply_to_screen_name=None,
                in_reply_to_user_id=None,
                in_reply_to_status_id=None,
@@ -110,6 +111,7 @@ class Status(object):
     self.id = id
     self.text = text
     self.user = user
+    self.place=place
     self.now = now
     self.in_reply_to_screen_name = in_reply_to_screen_name
     self.in_reply_to_user_id = in_reply_to_user_id
@@ -185,6 +187,14 @@ class Status(object):
 
   id = property(GetId, SetId,
                 doc='The unique id of this status message.')
+  
+  def GetPlace(self):    
+    '''Get the geographic location of this users last tweet.
+
+    Returns:
+      The geographic location of this users last tweet
+    '''
+    return self.place
 
   def GetInReplyToScreenName(self):
     return self._in_reply_to_screen_name
@@ -408,21 +418,31 @@ class Status(object):
     Returns:
       A twitter.Status instance
     '''
-    if 'user' in data:
-      user = User.NewFromJsonDict(data['user'])
+    if data != None:
+        if 'user' in data:
+          user = User.NewFromJsonDict(data['user'])
+        else:
+          user = None
+        if 'place' in data:
+          if (data['place'] != None):
+              place = Place.NewFromJsonDict(data['place'])
+          else:
+              place=None
+        else:
+          place = None
+        return Status(created_at=data.get('created_at', None),
+                      favorited=data.get('favorited', None),
+                      id=data.get('id', None),
+                      text=data.get('text', None),
+                      place=place,
+                      in_reply_to_screen_name=data.get('in_reply_to_screen_name', None),
+                      in_reply_to_user_id=data.get('in_reply_to_user_id', None),
+                      in_reply_to_status_id=data.get('in_reply_to_status_id', None),
+                      truncated=data.get('truncated', None),
+                      source=data.get('source', None),
+                      user=user)
     else:
-      user = None
-    return Status(created_at=data.get('created_at', None),
-                  favorited=data.get('favorited', None),
-                  id=data.get('id', None),
-                  text=data.get('text', None),
-                  in_reply_to_screen_name=data.get('in_reply_to_screen_name', None),
-                  in_reply_to_user_id=data.get('in_reply_to_user_id', None),
-                  in_reply_to_status_id=data.get('in_reply_to_status_id', None),
-                  truncated=data.get('truncated', None),
-                  source=data.get('source', None),
-                  user=user)
-
+        return None
 
 class User(object):
   '''A class representing the User structure used by the twitter API.
@@ -504,6 +524,8 @@ class User(object):
     '''
     return self._id
 
+
+
   def SetId(self, id):
     '''Set the unique id of this user.
 
@@ -560,6 +582,7 @@ class User(object):
       The geographic location of this user
     '''
     return self._location
+
 
   def SetLocation(self, location):
     '''Set the geographic location of this user.
@@ -930,6 +953,7 @@ class User(object):
       status = Status.NewFromJsonDict(data['status'])
     else:
       status = None
+    
     return User(id=data.get('id', None),
                 name=data.get('name', None),
                 screen_name=data.get('screen_name', None),
@@ -951,6 +975,67 @@ class User(object):
                 time_zone=data.get('time_zone', None),
                 url=data.get('url', None),
                 status=status)
+
+class Place(object):
+  
+  def __init__(self,
+               id=None,
+               name=None,
+               country_code=None,
+               country=None,
+               url=None,
+               full_name=None,
+               place_type=None):
+    self.id = id
+    self.name = name
+    self.country_code = country_code
+    self.country = country
+    self.url = url
+    self.full_name=name
+    self.place_type = place_type
+    
+  def AsDict(self):
+    '''A dict representation of this twitter.Place instance.
+
+    The return value uses the same key names as the JSON representation.
+
+    Return:
+      A dict representing this twitter.Place instance
+    '''
+    data = {}
+    if self.id:
+      data['id'] = self.id
+    if self.name:
+      data['name'] = self.name
+    if self.country:
+      data['country'] = self.country
+    if self.country_code:
+      data['country_code'] = self.country_code
+    if self.full_name:
+      data['full_name'] = self.full_name
+    if self.place_type:
+      data['place_type'] = self.place_type
+    if self.url:
+      data['url'] = self.url
+    return data
+
+  @staticmethod
+  def NewFromJsonDict(data):
+    '''Create a new instance based on a JSON dict.
+
+    Args:
+      data: A JSON dict, as converted from the JSON in the twitter API
+    Returns:
+      A twitter.User instance
+    '''
+    return Place(id=data.get('id', None),
+                name=data.get('name', None),
+                country_code=data.get('country_code', None),
+                country=data.get('country', None),
+                url=data.get('url', None),
+                full_name=data.get('full_name', None),
+                place_type=data.get('place_type', None))
+
 
 class DirectMessage(object):
   '''A class representing the DirectMessage structure used by the twitter API.
@@ -1576,7 +1661,7 @@ class Api(object):
     self._CheckForTwitterError(data)
     return Status.NewFromJsonDict(data)
 
-  def PostUpdate(self, status, in_reply_to_status_id=None):
+  def PostUpdate(self, status, in_reply_to_status_id=None, lat=None, long=None):
     '''Post a twitter status message from the authenticated user.
 
     The twitter.Api instance must be authenticated.
@@ -1606,6 +1691,12 @@ class Api(object):
     data = {'status': status}
     if in_reply_to_status_id:
       data['in_reply_to_status_id'] = in_reply_to_status_id
+    if lat:
+        data['lat'] = lat
+        data['display_coordinates'] = "true"
+    if long:
+        data['long'] = long
+    print data
     json = self._FetchUrl(url, post_data=data)
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)
@@ -1757,6 +1848,51 @@ class Api(object):
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)
     return [User.NewFromJsonDict(x) for x in data]
+
+  def GetSavedSearches(self):
+    '''Fetch users saved searches
+
+    The twitter.Api instance must be authenticated.
+
+    Returns:
+      json object with saved searches
+    '''
+    url = 'https://api.twitter.com/1/saved_searches.json'
+    print url
+    json = self._FetchUrl(url)
+    data = simplejson.loads(json)
+    self._CheckForTwitterError(data)
+    return data
+
+  def GetLists(self, user):
+    '''Fetch users lists
+
+    The twitter.Api instance must be authenticated.
+
+    Returns:
+      json object with lists
+    '''
+    url = self._base_url + user+'/lists.json'
+    print url
+    json = self._FetchUrl(url)
+    data = simplejson.loads(json)
+    self._CheckForTwitterError(data)
+    return data
+
+  def GetListMembers(self, user, listid):
+    '''Fetch members of lists
+
+    The twitter.Api instance must be authenticated.
+
+    Returns:
+      json object with members of specified list
+    '''
+    url = self._base_url + user+'/'+str(listid)+'/members.json'
+    print url
+    json = self._FetchUrl(url)
+    data = simplejson.loads(json)
+    self._CheckForTwitterError(data)
+    return data
 
   def GetUser(self, user):
     '''Returns a single user.

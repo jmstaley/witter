@@ -2,210 +2,20 @@
 <interface>
   <requires lib="gtk+" version="2.14"/>
   <!-- interface-naming-policy project-wide -->
+   
   <object class="GtkWindow" id="window1">
     <child>
       <object class="GtkVBox" id="vbox1">
         <property name="visible">True</property>
-        <child>
-          <object class="GtkHBox" id="hbox2">
-            <property name="visible">True</property>
-            <child>
-              <object class="HildonButton" id="timeline">
-                <property name="label" translatable="yes">timeline</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <signal name="clicked" handler="on_timeline_clicked"/>
-              </object>
-              <packing>
-                <property name="position">0</property>
-              </packing>
-            </child>
-            <child>
-              <object class="HildonButton" id="mentions">
-                <property name="label" translatable="yes">mentions</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <signal name="clicked" handler="on_mentions_clicked"/>
-              </object>
-              <packing>
-                <property name="position">1</property>
-              </packing>
-            </child>
-            <child>
-              <object class="HildonButton" id="direct messages">
-                <property name="label" translatable="yes">direct messages</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <signal name="clicked" handler="on_direct_messages_clicked"/>
-              </object>
-              <packing>
-                <property name="position">2</property>
-              </packing>
-            </child>
-            <child>
-              <object class="HildonButton" id="search">
-                <property name="label" translatable="yes">search</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <signal name="clicked" handler="on_search_clicked"/>
-              </object>
-              <packing>
-                <property name="position">3</property>
-              </packing>
-            </child>
-            <child>
-              <object class="HildonButton" id="friends">
-                <property name="label" translatable="yes">friends</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <signal name="clicked" handler="on_friends_clicked"/>
-              </object>
-              <packing>
-                <property name="position">4</property>
-              </packing>
-            </child>
-            <child>
-              <object class="HildonButton" id="trends">
-                <property name="label" translatable="yes">trends</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <signal name="clicked" handler="on_trends_clicked"/>
-              </object>
-              <packing>
-                <property name="position">5</property>
-              </packing>
-            </child>
-            <child>
-              <object class="HildonButton" id="public">
-                <property name="label" translatable="yes">public</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <signal name="clicked" handler="on_public_clicked"/>
-              </object>
-              <packing>
-                <property name="position">6</property>
-              </packing>
-            </child>
-            <child>
-              <object class="HildonButton" id="userhistory">
-                <property name="label" translatable="yes">userhistory</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <signal name="clicked" handler="on_user_history_clicked"/>
-              </object>
-              <packing>
-                <property name="position">7</property>
-              </packing>
-            </child>
-            <child>
-              <object class="HildonButton" id="extra-controls">
-                <property name="visible">True</property>
-		        <property name="can_focus">True</property>
-		        <property name="receives_default">True</property>
-		        <signal name="clicked" handler="on_extra_clicked"/>
-              </object>
-              <packing>
-                <property name="position">8</property>
-              </packing>
-            </child>
-            <child>
-              <object class="HildonButton" id="fullscr">
-                <property name="visible">True</property>
-		        <property name="can_focus">True</property>
-		        <property name="receives_default">True</property>
-		        <signal name="clicked" handler="on_fullscr_clicked"/>
-              </object>
-              <packing>
-                <property name="position">9</property>
-              </packing>
-            </child>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="position">0</property>
-          </packing>
-        </child>
-	<child>
+   	<child>
 	  <object class="HildonPannableArea" id="pannableArea">
 	    <property name="visible">True</property>
-	     
+	    
 	  </object>
 	  <packing>
-            <property name="expand">True</property>
-            <property name="position">1</property>
+            
           </packing>
 	</child>
-        <child>
-          <object class="GtkHBox" id="hbox1">
-            <property name="visible">True</property>
-            <child>
-              <object class="HildonEntry" id="TweetText">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="max_length">300</property>
-                <property name="invisible_char">&#x25CF;</property>
-              </object>
-              <packing>
-                <property name="position">1</property>
-              </packing>
-            </child>
-	    <child>
-              <object class="GtkLabel" id="Counter">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-		<property name="label" translatable="yes">140</property>
-	      </object>
-              <packing>
-		<property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">1</property>
-              </packing>
-            </child>
-            <child>
-              <object class="HildonButton" id="Tweet">
-                <property name="label" translatable="yes">Tweet</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <signal name="clicked" handler="newTweet"/>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">2</property>
-              </packing>
-            </child>
-            <child>
-	      <object class="GtkImage" id="image1">
-		<property name="visible">True</property>
-		<property name="icon_name">view-refresh</property>
-	     </object>
-	     <object class="HildonButton" id="Refresh">
-                <property name="image">image1</property>
-		<property name="label">Refresh</property>
-		<property name="name">Refresh</property>
-		<signal name="clicked" handler="getTweets"/>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">0</property>
-              </packing>
-            </child>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="position">2</property>
-          </packing>
-        </child>
         
         <child>
           <object class="GtkVBox" id="qwerty1">
@@ -217,60 +27,7 @@
           </packing>
         </child>
         
-        <child>
-          <object class="GtkHBox" id="hbuttonbox-more">
-            <property name="visible">True</property>
-            <child>
-              <object class="GtkButton" id="plus20">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <signal name="clicked" handler="on_plus20_clicked"/>
-              </object>
-              <packing>
-                <property name="position">0</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="plus50">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <signal name="clicked" handler="on_plus50_clicked"/>
-              </object>
-              <packing>
-                <property name="position">1</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="plus100">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <signal name="clicked" handler="on_plus100_clicked"/>
-              </object>
-              <packing>
-                <property name="position">2</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="plus200">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <signal name="clicked" handler="on_plus200_clicked"/>
-              </object>
-              <packing>
-                <property name="position">3</property>
-              </packing>
-            </child>
-            
-          </object>
-          <packing>
-            <property name="position">4</property>
-            <property name="expand">False</property>
-          </packing>
-        </child>
+        
         <child>
           <object class="GtkHBox" id="hbuttonbox-act2">
             <property name="visible">True</property>
@@ -512,4 +269,234 @@
     </action-widgets>
   </object>
   
+   <object class="GtkVBox" id="vboxPan">
+            <property name="visible">True</property>
+    	  <child>
+          <object class="GtkHBox" id="hbox2">
+            <property name="visible">True</property>
+            <child>
+              <object class="HildonButton" id="timeline">
+                <property name="label" translatable="yes">timeline</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="on_timeline_clicked"/>
+              </object>
+              <packing>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="HildonButton" id="mentions">
+                <property name="label" translatable="yes">mentions</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="on_mentions_clicked"/>
+              </object>
+              <packing>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="HildonButton" id="direct messages">
+                <property name="label" translatable="yes">direct messages</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="on_direct_messages_clicked"/>
+              </object>
+              <packing>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="HildonButton" id="search">
+                <property name="label" translatable="yes">search</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="on_search_clicked"/>
+              </object>
+              <packing>
+                <property name="position">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="HildonButton" id="friends">
+                <property name="label" translatable="yes">friends</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="on_friends_clicked"/>
+              </object>
+              <packing>
+                <property name="position">4</property>
+              </packing>
+            </child>
+            <child>
+              <object class="HildonButton" id="trends">
+                <property name="label" translatable="yes">trends</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="on_trends_clicked"/>
+              </object>
+              <packing>
+                <property name="position">5</property>
+              </packing>
+            </child>
+            <child>
+              <object class="HildonButton" id="public">
+                <property name="label" translatable="yes">public</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="on_public_clicked"/>
+              </object>
+              <packing>
+                <property name="position">6</property>
+              </packing>
+            </child>
+            <child>
+              <object class="HildonButton" id="userhistory">
+                <property name="label" translatable="yes">userhistory</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="on_user_history_clicked"/>
+              </object>
+              <packing>
+                <property name="position">7</property>
+              </packing>
+            </child>
+            
+            <child>
+              <object class="HildonButton" id="fullscr">
+                <property name="visible">True</property>
+		        <property name="can_focus">True</property>
+		        <property name="receives_default">True</property>
+		        <signal name="clicked" handler="on_fullscr_clicked"/>
+              </object>
+              <packing>
+                <property name="position">9</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child> 
+    
+        </object>
+
+
+          <object class="GtkHBox" id="hbuttonbox-more">
+            <property name="visible">True</property>
+            <child>
+              <object class="GtkButton" id="plus20">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="on_plus20_clicked"/>
+              </object>
+              <packing>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="plus50">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="on_plus50_clicked"/>
+              </object>
+              <packing>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="plus100">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="on_plus100_clicked"/>
+              </object>
+              <packing>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="plus200">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="on_plus200_clicked"/>
+              </object>
+              <packing>
+                <property name="position">3</property>
+              </packing>
+            </child>
+            
+          </object>
+          
+<object class="GtkHBox" id="hbox1">
+            <property name="visible">True</property>
+            <child>
+              <object class="HildonEntry" id="TweetText">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="max_length">300</property>
+                <property name="invisible_char">&#x25CF;</property>
+              </object>
+              <packing>
+                <property name="position">1</property>
+              </packing>
+            </child>
+	    <child>
+              <object class="GtkLabel" id="Counter">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+		<property name="label" translatable="yes">140</property>
+	      </object>
+              <packing>
+		<property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="HildonButton" id="Tweet">
+                <property name="label" translatable="yes">Tweet</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="newTweet"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+	      <object class="GtkImage" id="image1">
+		<property name="visible">True</property>
+		<property name="icon_name">view-refresh</property>
+	     </object>
+	     <object class="HildonButton" id="Refresh">
+                <property name="image">image1</property>
+		<property name="label">Refresh</property>
+		<property name="name">Refresh</property>
+		<signal name="clicked" handler="getTweets"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+          </object>
+          
 </interface>
