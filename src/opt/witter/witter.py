@@ -143,7 +143,7 @@ class Witter():
         self.selectedUser = ""
         self.theme = "default"
         self.gestures = True
-        self.location = True
+        self.location = False
         self.emailnotifications = True
         self.orientation = 'Landscape'
         #

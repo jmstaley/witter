@@ -1266,28 +1266,13 @@ class WitterUI():
                         self.reply_all = ""
                     else:
                         self.reply_all = name
-                    if re.search("http", entry):
+                    if re.search("http|www", entry):
                         #convert the string to chunks deliniated on space (we assume the url 
                         #has spaces around it 
                         L = string.split(entry)
                         for word in L :
                             #find the 'word' which is our url
-                            if re.search("http", word):
-                                url = word
-
-                                b = hildon.Button(gtk.HILDON_SIZE_FINGER_HEIGHT,
-                                                  hildon.BUTTON_ARRANGEMENT_VERTICAL)
-                                b.set_title('Open Url')
-                                b.set_value(url)
-                                b.connect("clicked", self.controller.openBrowser, url)
-                                hbox1.pack_start(b, expand=True)
-                    if re.search("www", entry):
-                        #convert the string to chunks deliniated on space (we assume the url 
-                        #has spaces around it 
-                        L = string.split(entry)
-                        for word in L :
-                            #find the 'word' which is our url
-                            if re.search("www", word):
+                            if re.search("http|www", word):
                                 url = word
 
                                 b = hildon.Button(gtk.HILDON_SIZE_FINGER_HEIGHT,
