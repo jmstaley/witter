@@ -16,7 +16,6 @@
 #for access to an account and associated runtime tweets/etc
 
 import twitter
-import oauthtwitter
 import gtk
 import re
 import osso
@@ -128,15 +127,12 @@ class account():
         self.control.start()
         
     def connect(self):
-        if self.accountdata.password:
-            print "Establishing api for " + self.accountdata.servicename + " using basic auth"
-            self.api = twitter.Api(username=self.accountdata.username, password=self.accountdata.password)
-            self.api.SetBaseUrl(self.accountdata.baseUrl)
-            self.api.SetBaseSearchUrl(self.accountdata.searchUrl)
-            
         if (self.accountdata.access_token != None):
             print "Establishing api for " + self.accountdata.servicename + " using oauth"
-            self.api = oauthtwitter.OAuthApi(self.CONSUMER_KEY, self.CONSUMER_SECRET, self.accountdata.access_token)
+            self.api = twitter.Api(consumer_key=self.CONSUMER_KEY, 
+                                   consumer_secret=self.CONSUMER_SECRET, 
+                                   access_token_key=self.accountdata.access_token.key,
+                                   access_token_secret=self.accountdata.access_token.secret)
         if (self.api == None):
             print "Failed to establish api for " + self.accountdata.servicename
             return False
@@ -167,7 +163,6 @@ class account():
                 formattedTweet =  self.format_tweet(user.GetName(), status.GetText(), status.GetCreatedAt(), source, status.GetInReplyToScreenName())
                 
                 self.controller.ui.profileLastTweet.set_markup("<span weight = 'bold' foreground=\"#6bd3ff\">Last Tweet: </span>" + formattedTweet)
-                
                 if (user.GetStatus().GetPlace() != None):
                     self.controller.ui.profileLocation.set_markup("<span weight = 'bold' foreground=\"#6bd3ff\">Location: </span>" +user.GetStatus().GetPlace().name)
                 else:
@@ -245,7 +240,10 @@ class account():
         if access_token:
             self.accountdata.access_token = access_token
             self.accountdata.accessType = "OAuth"
-            self.api = oauthtwitter.OAuthApi(self.CONSUMER_KEY, self.CONSUMER_SECRET, self.accountdata.access_token)
+            self.api = twitter.Api(consumer_key=self.CONSUMER_KEY, 
+                                   consumer_secret=self.CONSUMER_SECRET, 
+                                   access_token_key=self.accountdata.access_token.key,
+                                   access_token_secret=self.accountdata.access_token.secret)
             self.api.SetBaseUrl(self.accountdata.baseUrl)
 
     #accessor methods that return the entire list of data
@@ -274,9 +272,6 @@ class account():
             if (self.connect() != True):
                 return
             
-        print "getting tweets with " + self.accountdata.username
-        print "base url = " + self.accountdata.baseUrl
-        print "base url of api object = " + self.api.GetBaseUrl()
         receive_count = 0
         tryCount=0
         while (tryCount <5):
@@ -284,22 +279,21 @@ class account():
                 #by default we get newer tweets
                 if (older == False):
                     if self.accountdata.last_id == None:
-                        data = self.api.GetFriendsTimeline()
-                        rtdata = self.api.GetRetweets_to_user()
+                        data = self.api.GetFriendsTimeline(retweets=True)
                     else:
                         print "refreshing since" + str(self.accountdata.last_id)
-                        data = self.api.GetFriendsTimeline(since_id=self.accountdata.last_id, count=200)
-                        rtdata = self.api.GetRetweets_to_user(since_id=self.accountdata.last_id, count=200)
+                        data = self.api.GetFriendsTimeline(since_id=self.accountdata.last_id, 
+                                                           count=100,
+                                                           retweets=True)
                 else:
                     if self.accountdata.oldest_id == None:
-                        data = self.api.GetFriendsTimeline(count=get_count)
-                        print "fetching retweets to user"
-                        rtdata = self.api.GetRetweets_to_user(count=get_count)
+                        data = self.api.GetFriendsTimeline(count=get_count,
+                                                           retweets=True)
                     else:
                         print "refreshing retweets prior to" + str(self.accountdata.oldest_id)
-                        data = self.api.GetFriendsTimeline(max_id=self.accountdata.oldest_id, count=get_count)
-                        rtdata = self.api.GetRetweets_to_user(max_id=self.accountdata.oldest_id, count=get_count)
-                data += rtdata
+                        data = self.api.GetFriendsTimeline(max_id=self.accountdata.oldest_id, 
+                                                           count=get_count,
+                                                           retweets=True)
                 for x in data:
                      if x != None:
                          if (self.checkStoreForTweet(long(x.id),self.tweetstore)):
