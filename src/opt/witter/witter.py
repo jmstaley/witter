@@ -56,7 +56,6 @@ import cProfile
 import dbus
 import dbus.glib
 import conic 
-#import witter components
 import ui
 import account
 
@@ -153,8 +152,6 @@ class Witter():
         if (self.config == None):
             self.config = self.createConfig()
 
-        # self.treeview.connect("changed", self.build_menu, None);
-        #self.treeview.tap_and_hold_setup(self.urlmenu, callback=gtk.tap_and_hold_menu_position_top)
     	#init the configDialog
 
         self.configDialog = None
@@ -179,7 +176,6 @@ class Witter():
 
         #pass the witter ui a reference to this object for callbacks
         self.ui = ui.WitterUI(self)
-        #self.ui.setActiveListStore(self.activeAccount.getTimeline(),4)
         self.ui.theme = self.theme
         self.ui.load_theme_icons()
         self.ui.select_ui_theme(self.theme)
@@ -230,7 +226,6 @@ class Witter():
         curView = self.ui.getCurrentView()
         if (curView == self.ui.TIMELINE_VIEW):
 
-            #self.getTweets()
     	    refreshtask = witter.RefreshTask(self.getTweetsWrapper, 0, None)
     	    refreshtask.refresh()
         elif (curView == self.ui.DM_VIEW):
@@ -257,7 +252,6 @@ class Witter():
             refreshtask.refresh()
 
 	self.ui.hideBottomBar()
-	#self.builder.get_object("hbox2").hide_all()
 
     def enterPressed(self, widget, tweetBox, *args):
         self.ui.showBusy(1)
@@ -348,18 +342,14 @@ class Witter():
 
     def openBrowser(self, widget, url, *args):
         #open a url in a browser
-
         print "opening browser - maemo5 style"
-        #webbrowser.open_new(url)
         self.osso_rpc.rpc_run_with_defaults("osso_browser", "open_new_window", (url,))
 
         print "We tried to open a browser"
         
     def FavouriteTweet(self, widget, id, *args):
         #open a url in a browser
-
         print "Favourite the tweet"
-        #webbrowser.open_new(url)
         self.activeAccount.FavouriteTweet(self,long(id))
         print "tweet set as favourite"
 
@@ -412,7 +402,6 @@ class Witter():
             except ConfigParser.NoOptionError:
                 print "missing option in config"
             try:
-                #self.access_token = config.get("credentials", "access_token")
                 topCol = config.get("UI", "bg_top")
                 
                 self.bg_top_color = gtk.gdk.color_parse(topCol)
@@ -819,10 +808,8 @@ class Witter():
          self.access_token = access_token
          api = oauthtwitter.OAuthApi(self.CONSUMER_KEY, self.CONSUMER_SECRET, access_token)
          self.auth_account.access_token = access_token
-         #self.activeAccount.setAccessToken(access_token)
          self.ui.builder.get_object("OauthDialog").hide_all()
          self.ui.reload_account_window(widget, self.auth_account)
-
 
     def  store_creds(self, widget, *args):
         print "store_creds called"
@@ -832,11 +819,8 @@ class Witter():
         self.password = self.ui.builder.get_object("Password").get_text()
         self.writeConfig()
 
-
-
     def selectImage(self, widget):
         #bring up a file choser to let people select images
-        #imageChose = self.wTree.get_widget("filechooserdialog1")
         imageChose = self.ui.builder.get_object("filechooserdialog1")
 
         filter = gtk.FileFilter()
@@ -849,15 +833,12 @@ class Witter():
 
 
     def twitPic(self, widget, *args):
-        print "twitPic"
-        #dialog = self.wTree.get_widget("filechooserdialog1")
         dialog = self.ui.builder.get_object("filechooserdialog1")
         file = dialog.get_filename()
 
         try:
             fin = open(file, "rb")
             jpgImage = fin.read()
-            #tweet = self.wTree.get_widget("TweetText").get_text()
             tweet = self.ui.getEntryText()
             #see if we have just an empty string (eg eroneous button press)
             if (tweet == ""):
@@ -874,7 +855,6 @@ class Witter():
                                   ("username", self.activeAccount.getUsername()),
                                   ("password", self.activeAccount.getPassword()),
                                   ("message", tweet)])
-            #c.setopt(c.VERBOSE, 1)
             c.perform()
             c.close()
             print "posted TwitPic"
@@ -885,7 +865,6 @@ class Witter():
             # what I don't want is to lose the tweet I typed if we didn't
             # sucessfully send it to twitter. that would be annoying (I'm looking
             # at you Mauku)
-            #self.wTree.get_widget("TweetText").set_text("")
             self.ui.setTweetText("")
             dialog.hide()
         except IOError:
@@ -1032,7 +1011,6 @@ class Witter():
         #call the get method for whichever liststore we're viewing
         curView = self.ui.getCurrentView()
         if (curView == self.ui.TIMELINE_VIEW):
-            #self.getTweets()
             refreshtask = witter.RefreshTask(self.getTweetsWrapper, more, None)
             refreshtask.refresh()
         elif (curView == self.ui.DM_VIEW):
@@ -1167,23 +1145,16 @@ class Witter():
          if method == 'open_mentions':
             self.ui.toggleviewto("mentions")
             self.ui.window.show()
-            #self.ui.window.fullscreen()
-            #self.ui.window.setActiveWindow()
 
          if method == 'open_dm':
             self.ui.toggleviewto("direct")
             self.ui.window.show()
-            #self.ui.window.fullscreen()
-            
-            #self.ui.window.setActiveWindow()
             
     def _on_orientation_signal(self, orientation, stand, face, x, y, z):
          
          if (self.ui.activeWindow.get_is_topmost()):
              if ((orientation == 'portrait') & (self.ui.current_orientation == 'landscape') ):
                 print "switching to portrait from " + self.ui.current_orientation
-                #self.ui.orientation=orientation
-                #self.ui.cell.set_property('wrap-width', 400)
                 
                 self.ui.icon_size = 30
                 self.ui.load_theme_icons()
@@ -1203,8 +1174,6 @@ class Witter():
                 
              if ((orientation == 'landscape') & (self.ui.current_orientation == 'portrait')):
                 print "switching to landscape from " + self.ui.current_orientation
-                #self.ui.orientation=orientation
-                #self.ui.cell.set_property('wrap-width', 730)
                 
                 self.ui.icon_size = 48
                 self.ui.load_theme_icons()
@@ -1224,24 +1193,6 @@ class Witter():
                 self.ui.current_orientation = 'landscape'
          else:
             print "not top most window, not rotating"
-             #print "refresh current view"
-             #curView = self.ui.getCurrentView()  
-             #if (curView == self.ui.TIMELINE_VIEW):
-             #   self.ui.switch_view_to("timeline")
-             #elif (curView == self.ui.DM_VIEW):
-             #   self.ui.switch_view_to("direct")
-             #elif (curView == self.ui.MENTIONS_VIEW):
-             #   self.ui.switch_view_to("mentions")
-             #elif (curView == self.ui.PUBLIC_VIEW):
-             #   self.ui.switch_view_to("public")
-             #elif (curView == self.ui.TRENDS_VIEW):
-             #   self.ui.switch_view_to("trends")
-             #elif (curView == self.ui.FRIENDS_VIEW):
-             #   self.ui.switch_view_to("friends")
-             #elif (curView == self.ui.SEARCH_VIEW):
-             #   self.ui.switch_view_to("search")
-             #elif (curView == self.ui.USERHIST_VIEW):
-             #   self.ui.switch_view_to("user")
             
     def establish_connection(self):
         magic = 0xAA55 

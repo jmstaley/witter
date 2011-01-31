@@ -101,14 +101,11 @@ class witterCellRender(gtk.GenericCellRenderer):
 
 	def __init__(self):
 		print "renderer init"
-		#gobject.GObject.__init__(self)
 		gtk.GenericCellRenderer.__init__(self)
 
 		self.__properties = {}
-		#gtk.GenericCellRenderer.__init__(self)
 
 	def on_get_size(self, widget, cell_area):
-		#print "on_get_size, ", locals()
 		surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 800, 480)
 		ctx = cairo.Context(surface)
 		cr = pangocairo.CairoContext(ctx)
@@ -151,7 +148,6 @@ class witterCellRender(gtk.GenericCellRenderer):
 
 		pat = cairo.LinearGradient(x, y, x, y + h)
 		color = gtk.gdk.Color(red=self.get_property('backgroundt_r'), green=self.get_property('backgroundt_g'), blue=self.get_property('backgroundt_b'), pixel=self.get_property('backgroundt_p'))
-		#color = gtk.gdk.color_parse(self.get_property('background_top'))
 		## #6bd3ff
 		pat.add_color_stop_rgba(
 							0.0,
@@ -160,7 +156,6 @@ class witterCellRender(gtk.GenericCellRenderer):
 							self.get_cairo_color(color.blue),
 							1)
 		## #0075b5
-		#color = gtk.gdk.color_parse(self.get_property('background_bottom'))
 		color = gtk.gdk.Color(red=self.get_property('backgroundb_r'), green=self.get_property('backgroundb_g'), blue=self.get_property('backgroundb_b'), pixel=self.get_property('backgroundb_p'))
 		pat.add_color_stop_rgb(
 							1.0,
@@ -173,19 +168,15 @@ class witterCellRender(gtk.GenericCellRenderer):
 		cairo_context.fill()
 
 
-		#super.on_render(self, window, widget, background_area, cell_area, expose_area, flags)
 		#we want to calculate the actual height to render the backing so we need the space required
 		#to render the string using the specified font and font size
 		cairo_context.set_source_rgba(1, 1, 1, 1)
-		#cairo_context.select_font_face("Georgia", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-		#cairo_context.set_font_size(self.get_property('font_size'))
 		layout = cairo_context.create_layout()
 		font = pango.FontDescription("Sans")
 		font.set_size(pango.SCALE * (self.get_property('font_size')))
 		font.set_style(pango.STYLE_NORMAL)
 		font.set_weight(pango.WEIGHT_BOLD)
 		layout.set_font_description(font)
-		#print w
 		layout.set_width(pango.SCALE * w)
 		layout.set_wrap(pango.WRAP_WORD)
 
@@ -211,14 +202,12 @@ class witterCellRender(gtk.GenericCellRenderer):
 		tweet_x, tweet_y, tweet_w, tweet_h = logicalRect
 
 		cairo_context.show_layout(layout)
-			#cairo_context.move_to((x+10)+(len(line)*(self.get_property('font_size')/2)) ,((y+height) + ((linecount)*height) +2))
 		if ((self.get_property('replyto') != "") & (self.get_property('replyto') != None)):
 			#process any retweet text
 			layout = cairo_context.create_layout()
 			cairo_context.set_source_rgba(1, 1, 1, 1)
 			font = pango.FontDescription("Sans")
 			font.set_size(pango.SCALE * (self.get_property('font_size') - 2))
-			#font.set_size(pango.SCALE * (12))
 			font.set_style(pango.STYLE_NORMAL)
 			font.set_weight(pango.WEIGHT_BOLD)
 			layout.set_font_description(font)
@@ -233,16 +222,12 @@ class witterCellRender(gtk.GenericCellRenderer):
 		cairo_context.set_source_rgba(1, 1, 1, 1)
 		cairo_context.select_font_face("Georgia",
                 cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-		#cairo_context.set_font_size(self.get_property('font_size') - 5)
 		cairo_context.set_font_size(12)
 		ts_x_bearing, ts_y_bearing, ts_width, ts_height = cairo_context.text_extents("From " + str(self.get_property('source')) + " at " + str(self.get_property('timestamp')))[:4]
 		#position in the bottom right, in set by the width of the timestamp, and a little padding
 		cairo_context.move_to(x + (w - (ts_width + 10)), y + (h - 5))
 		cairo_context.show_text("From " + str(self.get_property('source')) + " at " + str(self.get_property('timestamp')))
 
-#	def render_rect(self, cr, x, y, w, h):
-		#render a rectangle
-#		cr.rectangle(x,y,w,h)
 	def render_rect(self, cr, x, y, w, h):
 		'''
 		create a rectangle with rounded corners
@@ -282,7 +267,6 @@ class witterCellRender(gtk.GenericCellRenderer):
 		font.set_style(pango.STYLE_NORMAL)
 		font.set_weight(pango.WEIGHT_BOLD)
 		layout.set_font_description(font)
-		#print w
 		layout.set_width(pango.SCALE * 780)
 		layout.set_wrap(pango.WRAP_WORD)
 		layout.set_text(text)
@@ -290,29 +274,6 @@ class witterCellRender(gtk.GenericCellRenderer):
 		inkRect, logicalRect = layout.get_pixel_extents()
 		tweet_x, tweet_y, width, tweet_h = logicalRect
 
-		#if ((self.get_property('replyto') != "") & (self.get_property('replyto') != None)):
-			#process any retweet text
-			#layout2 = cairo_context.create_layout()
-			#font = pango.FontDescription("Sans")
-			#font.set_size(pango.SCALE * (self.get_property('font_size') - 6))
-			#font.set_style(pango.STYLE_NORMAL)
-			#font.set_weight(pango.WEIGHT_BOLD)
-			#layout2.set_font_description(font)
-			#layout2.set_wrap(pango.WRAP_WORD)
-			#layout2.set_width(pango.SCALE * 780)
-			##set position under the main tweet text
-			#layout2.set_text(self.get_property('replyto'))
-			#inkRect2, logicalRect2 = layout2.get_pixel_extents()
-			#reply_x, reply_y, reply_width, reply_tweet_h = logicalRect2
-			#print reply_tweet_h
-		#	tweet_h = tweet_h + 15
-		#figure out how many times we need to split the string to fit on the screen
-		#divide_text = width / (widget.allocation.width - 8)
-		#round the value to an int and plus 1
-		#divide_text = int(divide_text) + 1
-		#the rectangle height is the height of one line of text plus spacing * the number of lines needed
-		#r#ect_height = divide_text * (height +4)
-		#rect_height = rect_height + (2*height)
 		return tweet_h + 20
 
 	def get_cairo_color(self, color):

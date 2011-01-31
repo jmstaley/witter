@@ -101,8 +101,6 @@ class account():
         self.locationSetup=False
         self.dmnotify = pynotify.Notification("Witter","You have new DMs")
         self.dmnotify.add_action("clicked","Show DMs", self.dm_callback)
-        #TODO move this and check if the call can be put on background thread from main loop
-        #self.updateLocation()
         
     def updateLocation(self):    
         #start up location tracking
@@ -178,7 +176,6 @@ class account():
                     
                 avatar, loaded = self.retrieve_avatar(user.GetProfileImageUrl(), str(user.id)+".jpg")   
                 avatar = avatar.scale_simple(90, 90, gtk.gdk.INTERP_BILINEAR)
-                #self.controller.ui.profileImage.set_from_file("/home/user/.witterPics/" + self.accountdata.servicename + "/" + str(user.id)+".jpg")
                 self.controller.ui.profileImage.set_from_pixbuf(avatar)  
                 self.getSavedSearches()
                 self.getLists()
@@ -457,13 +454,11 @@ class account():
                         n = pynotify.Notification("Witter","You have "+str(receive_count)+" new mentions")
                         n.set_urgency(pynotify.URGENCY_CRITICAL)
                         icon= gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/default/tweet.png")
-                        #n.add_action("clicked","Show DMs", self.dm_callback)
                         n.set_hint("dbus-callback-default", "uk.wouldd.witter /uk/wouldd/witter uk.wouldd.witter open_mentions")
                         n.set_icon_from_pixbuf(icon)
                         rpc = osso.Rpc(self.osso_c)
                         rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._ENABLE_LED,rpc_args=(self._LED_PATTERN,"",""),use_system_bus=True)
                         rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._VIBRATE,rpc_args=(self._VIBRATE_PATTERN,"",""),use_system_bus=True)
-                        #n.attach_to_widget(self.controller.ui.window)
                         n.show()
                 return
             except IOError, e:
@@ -563,9 +558,7 @@ class account():
                     rpc = osso.Rpc(self.osso_c)
                     rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._ENABLE_LED,rpc_args=(self._LED_PATTERN,"",""),use_system_bus=True)
                     rpc.rpc_run(self._MCE_SERVICE, self._MCE_REQUEST_PATH,self._MCE_REQUEST_IF,self._VIBRATE,rpc_args=(self._VIBRATE_PATTERN,"",""),use_system_bus=True)
-                    #dmnotify.add_action("clicked","Show DMs", self.dm_callback)
 
-                #n.attach_to_widget(self.controller.ui.window)
                 n.show()
         except IOError, e:
             print "error"
@@ -821,7 +814,6 @@ class account():
 
     def getSearch(self, searchTerms="", auto=0, older=False, get_count=20, * args):
         print "performing search"
-        #self.searchstore.clear()
         receive_count = 0
         #if we're not getting older tweets then pay attention to whether we want to clear search results
         if older==False:
@@ -1059,8 +1051,6 @@ class account():
                         print "lat = %f, long = %f" % self.device.fix[4:6]
                         self.lat, self.long = self.device.fix[4:6]
             
-        #if (self.controller.location):
-        #    self.updateLocation()
         try:
 
             if (reply_to_name != None):
@@ -1280,8 +1270,6 @@ class account():
         return self.set_pix(id + ".jpg", url, id, name)
 
     def set_pix(self, filename, url, id, name):
-        #print "looking for image /home/user/.witterPics/" + filename
-        #print "profile pic url " + url
         item = self.avatars.get_iter_first ()
         #first find out if we already loaded this avatar
         while (item != None):
@@ -1319,8 +1307,6 @@ class account():
         else:
             try:
                 pixbuf, success = self.retrieve_avatar(url, filename)
-                #urllib.urlretrieve(url, " / home / user / .witterPics / " + filename)
-                #print "profile pic retrieved"
                 if (success == True):
                     self.avatars.append([pixbuf, filename, 1, name])
                     self.update_all_avatars(id, pixbuf)
@@ -1452,7 +1438,6 @@ class account():
 
 
             msgDate = datetime.datetime.strptime(strippedDate, "%a %b %d %H:%M:%S +0000 %Y")
-            #msgDate = date.fromtimestamp(secsSinceEpoc)
         except ValueError:
             try:
                 print "trying timestamp format Mon, Jan 01 2010 00:00:00 +0000"
@@ -1469,8 +1454,6 @@ class account():
 
         timestamp = msgDate.time()
         print timestamp.tzinfo
-        #print datetime.datetime.tzname()
-        #msgDate = msgDate.astimezone(LocalTimezone())
         t = time.time()
 
         # we want something like '2007-10-18 14:00+0100'
@@ -1561,9 +1544,7 @@ class account():
             return
         if device.fix:
             if device.fix[1] & location.GPS_DEVICE_LATLONG_SET:
-                #print "lat = %f, long = %f" % device.fix[4:6]
                 self.lat, self.long = device.fix[4:6]
-                #data.stop()
     
     def on_stop(self,control, data):
         print "quitting"

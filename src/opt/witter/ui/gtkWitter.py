@@ -50,7 +50,6 @@ class WitterUI():
     PUBLIC_VIEW = 7
     USERHIST_VIEW = 8
     def __init__(self, controller):
-        #pynotify.init("Witter")
         self.version = controller.getVersion()
         self.controller = controller
         #controller is the master program which handles all the events
@@ -75,9 +74,6 @@ class WitterUI():
         self.current_orientation ='landscape'
         self.activeWin="home"
         self.textBoxContents=""
-        #Set the Glade file
-        #self.gladefile = "/usr/share/witter/witter.glade"  
-        #self.wTree = gtk.glade.XML(self.gladefile) 
         self.builder = gtk.Builder()
         self.builder.add_from_file("/usr/share/witter/witter.ui")
         print "UI elements loaded from file"
@@ -115,7 +111,6 @@ class WitterUI():
         }
         self.builder.connect_signals(dic)
         print "signals connected to buttons"
-        #GtkTreeView::grid-line-width = 20
         gtk.rc_parse_string("""
            style "my-style" 
            {
@@ -129,7 +124,6 @@ class WitterUI():
            }
            class "GtkTreeView" style "my-style"
          """)
-        #self.wTree.signal_autoconnect( dic )
         self.icon_size = 48
         self.viewbutton_width=78
         self.viewbutton_depth=60
@@ -140,15 +134,9 @@ class WitterUI():
         self.define_ui_buttons()
         #fix the buttons to get the style right 
         
-
-
-        
-
         okButton = self.builder.get_object("Ok")
         cancelButton = self.builder.get_object("Cancel")
         okoauthButton = self.builder.get_object("Ok-oauth")
-
-
 
         #action buttons for a tweet
         replybutton = self.builder.get_object("Reply")
@@ -157,27 +145,10 @@ class WitterUI():
         dmbutton = self.builder.get_object("DirectMessage")
         atUserbutton = self.builder.get_object("AtUser")
 
-
-        #followbutton = self.builder.get_object("Follow")
-        #unfollowbutton = self.builder.get_object("UnFollow")
-        #usersTimelinebutton = self.builder.get_object("UsersTimeline")
-
         okButton.set_name("HildonButton-finger")
         cancelButton.set_name("HildonButton-finger")
         okoauthButton.set_name("HildonButton-thumb")
 
-
-        #action buttons
-        #replybutton.set_name("HildonButton-finger")
-        #replyAllbutton.set_name("HildonButton-finger")
-        #retweetbutton.set_name("HildonButton-finger")
-        #dmbutton.set_name("HildonButton-finger")
-        #atUserbutton.set_name("HildonButton-finger")
-        #followbutton.set_name("HildonButton-thumb")
-        #unfollowbutton.set_name("HildonButton-thumb")
-        #usersTimelinebutton.set_name("HildonButton-thumb")
-        
-        #self.define_portrait_keyboard()
         print "define portrait keyboard objects"
         
         print "define general window"
@@ -208,55 +179,33 @@ class WitterUI():
         #add window to self  
         self.controller.program.add_window(self.window)
         #reparent the vbox1 from glade to self.window
-        # self.vbox = self.wTree.get_widget("vbox1")
         self.vbox = self.builder.get_object("vbox1")
-        #pannedWindow = hildon.PannableArea()
         pannedWindow = self.builder.get_object("pannableArea")
-        # hildon.hildon_pannable_area_new_full(mode, enabled, vel_min, vel_max, decel, sps)
         self.window.window.property_change("_HILDON_ZOOM_KEY_ATOM", "XA_INTEGER", 32, gtk.gdk.PROP_MODE_REPLACE, [1])
-        #self.scrolled_window = self.wTree.get_widget("scrolled_window")
         self.vbox.reparent(self.window)
-        #self.vbox.pack_end(pannedWindow)
 
-        #self.urlmenu = self.build_right_click_menu()
-        # create a menu object by calling a method to deine it
         self.menu = self.create_m5_menu(self)
         # add the menu to the window
         self.window.set_app_menu(self.menu)
-        #
         self.activeWindow=self.window
 
-        
-        
-        #with all that done I add the treeview to the scrolled window
-        #pannedWindow.add_with_viewport(self.treeview)
-        #box = gtk.VBox()
-        #box.pack_start(self.treeview)
         self.accountvbox = gtk.VBox()
  
-        
         profilehbox = self.account_summary()
         
         self.accountvbox.pack_start(profilehbox, expand=False)
-        #vbox.pack_start(profilevbox2,expand=False)
-        #vbox.pack_start(self.vboxTLButtons,expand=False)
-        #
-        #box.show
+        
         print "adding button to panned area"
-        #pannedWindow.set_property("mov-mode", hildon.MOVEMENT_MODE_BOTH)
 
         pannedWindow.add_with_viewport(self.accountvbox)
         print "time to show the window"
         self.window.show_all()
         self.window.connect("key-press-event", self.on_key_press)
-        #self.window.connect("button-press-event", self.on_button_pressed)
         self.window.connect("window-state-event", self.on_window_state_change)
         #hide the action buttons
-        #self.builder.get_object("hbuttonbox-act1").hide_all()
         self.builder.get_object("hbuttonbox-act2").hide_all()
         self.builder.get_object("hbuttonbox-act3").hide_all()
         self.builder.get_object("hbuttonbox-act4").hide_all()
-        #self.builder.get_object("hbuttonbox-more").hide_all()
         self.activeListstore = gtk.ListStore(str, str, str, str, str, str, str, str, str)
         self.activeView = self.TIMELINE_VIEW
         
@@ -293,7 +242,6 @@ class WitterUI():
         
         opentl = hildon.Button(gtk.HILDON_SIZE_FINGER_HEIGHT,
                                                   hildon.BUTTON_ARRANGEMENT_VERTICAL)
-        #opentl.set_title('Reply All')
         tlImage = gtk.Image()
         tlpixbuf_on = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.controller.theme + "/timeline.png")
         
@@ -303,7 +251,6 @@ class WitterUI():
         
         openser = hildon.Button(gtk.HILDON_SIZE_FINGER_HEIGHT,
                                                   hildon.BUTTON_ARRANGEMENT_VERTICAL)
-        #opentl.set_title('Reply All')
         serImage = gtk.Image()
         serpixbuf_on = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.controller.theme + "/search.png")
         
@@ -313,7 +260,6 @@ class WitterUI():
         
         openfriends = hildon.Button(gtk.HILDON_SIZE_FINGER_HEIGHT,
                                                   hildon.BUTTON_ARRANGEMENT_VERTICAL)
-        #opentl.set_title('Reply All')
         friendsImage = gtk.Image()
         friendspixbuf_on = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.controller.theme + "/friends.png")
         
@@ -334,8 +280,6 @@ class WitterUI():
         self.profileLocation.set_text("Location: ")
         profilevbox.pack_start(self.profileLastTweet,expand=False)
         profilevbox.pack_start(self.profileLocation,expand=False)
-        #profilevbox2.pack_start(self.profileLastTweet,expand=False)
-        #profilevbox2.pack_start(self.profileLocation,expand=False)
         profilehbox.pack_start(profilevbox, expand=False)
         
         buttonvbox = gtk.VBox()
@@ -346,11 +290,6 @@ class WitterUI():
         
         profilehbox.pack_start(buttonvbox, expand=False)
         
-        #profilehbox.pack_start(profilevbox2,expand=True)
-        #test = hildon.Button(gtk.HILDON_SIZE_FINGER_HEIGHT,
-        #                                              hildon.BUTTON_ARRANGEMENT_VERTICAL)
-        #test.set_title("")
-        #profilehbox.pack_start(test, expand=True)
         return profilehbox    
         
     def define_treeview(self):
@@ -363,13 +302,8 @@ class WitterUI():
 
         # info stored in the liststore
         treeview = gtk.TreeView(liststore)
-        #self.treeview = hildon.GtkTreeView(gtk.HILDON_UI_MODE_NORMAL)
-
-        #self.treeview = hildon.hildon_gtk_tree_view_new(self.liststore)
         treeview.set_rules_hint(True)
-        
         treeview.set_model(self.activeListstore)
-
 
         # create the TreeViewColumn to display the data, I decided on two colums
         # one for name and the other for the tweet
@@ -382,24 +316,11 @@ class WitterUI():
 
         color2 = self.bg_bottom_color
 
-
-        #self.cell.set_property('backgroundt_r', color.red)
-        #self.cell.set_property('backgroundt_g', color.green)
-        #self.cell.set_property('backgroundt_b', color.blue)
-        #self.cell.set_property('backgroundt_p', color.pixel)
-        #self.cell.set_property('backgroundb_r', color2.red)
-        #self.cell.set_property('backgroundb_g', color2.green)
-        #self.cell.set_property('backgroundb_b', color2.blue)
-        #self.cell.set_property('backgroundb_p', color2.pixel)
-        #self.cell.set_property('font_size', self.font_size)
-
         tvctweet = gtk.TreeViewColumn('Pango Markup', cell, markup=10)
 
         #Column 0 for the treeview
         renderer = gtk.CellRendererPixbuf()
         renderer.set_property('yalign', 0)
-        #renderer.set_property('ypad', 10)
-        #renderer.set_property('cell-background-gdk', gtk.gdk.color_parse("#6bd3ff"))
 
         column = gtk.TreeViewColumn()
         column.pack_start(renderer, True)
@@ -416,42 +337,26 @@ class WitterUI():
         cell.set_property('wrap-width', self.width)
         cell.set_property('size-points', self.controller.font_size)
 
-
         treeview.append_column(tvctweet)
 
-
-
         treeview.set_property('enable-grid-lines', True)
-        #self.tvctweet = gtk.TreeViewColumn('Tweet')
-        # add the two tree view columns to the treeview
-        #self.treeview.append_column(self.tvcname)
-
-
 
         # next we add a mapping to the tweet column, again the third field
         # in our list store is the tweet text
         tvctweet.add_attribute(cell, 'text', 10)
         tvctweet.add_attribute(cell, 'visible', 11)
-        #self.tvctweet.add_attribute(self.cell, 'timestamp', 6)
-        #self.tvctweet.add_attribute(self.cell, 'replyto', 7)
-        #self.tvctweet.add_attribute(self.cell, 'source', 8)
 
         # make it searchable (I found this in an example and thought I might use it
         # but currently I make no use of this setting
         treeview.set_search_column(2)
         treeview.set_rules_hint(True)
 
-        #self.treeview.set_property('enable-grid-lines', True)
-
         # Allow sorting on the column. This is cool because no matter what order
         # we load tweets in, we always get a view which is sorted by the tweet id which
         # always increments, so we get them in order
-
         liststore.set_sort_column_id(4, gtk.SORT_DESCENDING)
         # I don't want to accidentally be dragging and dropping rows out of order
         treeview.set_reorderable(False)
-        #self.treeview.connect("button-press-event", self.build_menu, None);
-        #self.treeview.connect('row-activated', self.build_menu)
         treeview.connect('row-activated', self.build_stacked_menu, treeview)
         
         return treeview, tvctweet, cell
@@ -475,7 +380,6 @@ class WitterUI():
         win.set_app_menu(menu)
         win.realize()
         
-        #self.window.connect("button-press-event", self.on_button_pressed)
         win.connect("window-state-event", self.on_window_state_change)
         win.window.property_change("_HILDON_ZOOM_KEY_ATOM", "XA_INTEGER", 32, gtk.gdk.PROP_MODE_REPLACE, [1])
         self.keyboard = self.define_portrait_keyboard()
@@ -484,7 +388,6 @@ class WitterUI():
         pannedArea = hildon.PannableArea()
         treeview, tvctweet, cell = self.define_treeview()
         
-        #treeview.set_model(liststore)
         self.tweetText = gtk.TextView()
         self.tweetText.set_editable(True)
         self.tweetText.set_wrap_mode(gtk.WRAP_WORD)
@@ -501,24 +404,15 @@ class WitterUI():
         vbox2 = gtk.VBox()
         
         tweetBox = gtk.HBox()
-        #self.tweetText =  hildon.Entry(gtk.HILDON_SIZE_AUTO)
-        
         
         textBuf.connect("changed", self.CharsRemaining, tweetBox, self.tweetText,counter)
         self.tweetText.connect("focus-in-event", self.text_entry_selected)
         self.tweetText.connect("focus-out-event", self.text_entry_deselected)
-        #tweetComplete = gtk.EntryCompletion()
-        #tweetComplete.set_model(self.controller.activeAccount.getFriendsList())
-        #tweetComplete.set_text_column(0)
-        #tweetComplete.set_inline_completion(True)
-        #tweetComplete.set_minimum_key_length(2)
         tweetBox.pack_start(self.tweetText)
         
         tweetBox.pack_start(counter,expand=False)
         self.tweetButton.connect("clicked", self.controller.enterPressed, self.tweetText)
         tweetBox.pack_start(self.tweetButton,expand=False)
-        #self.tweetText.set_completion(tweetComplete)
-
         
         iconBox = gtk.HBox()
         iconBox2 = gtk.HBox()
@@ -621,7 +515,6 @@ class WitterUI():
     def closed_timeline(self, widget):
         print "closed timeline view"
         self.activeWin="home"
-        #widget.destroy()
     
     def load_theme_icons(self):
         if (os.path.isdir("/opt/witter/icons/" + self.theme) != True):
@@ -667,11 +560,6 @@ class WitterUI():
         self.userhistpixbuf_off  = self.userhistpixbuf_off.scale_simple(self.icon_size, self.icon_size, gtk.gdk.INTERP_BILINEAR)
         self.userhistpixbuf_on = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.theme + "/userHistory.png")
         self.userhistpixbuf_on  = self.userhistpixbuf_on.scale_simple(self.icon_size, self.icon_size, gtk.gdk.INTERP_BILINEAR)
-        
-        #self.lesspixbuf_off = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.theme + "/minus.png")
-        #self.lesspixbuf_off  = self.lesspixbuf_off.scale_simple(self.icon_size, self.icon_size, gtk.gdk.INTERP_BILINEAR)
-        #self.morepixbuf_on = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.theme + "/plus.png")
-        #self.morepixbuf_on  = self.morepixbuf_on.scale_simple(self.icon_size, self.icon_size, gtk.gdk.INTERP_BILINEAR)
         
         self.unfullscrpixbuf_off = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.theme + "/unfullscr.png")
         self.unfullscrpixbuf_off  = self.unfullscrpixbuf_off.scale_simple(self.icon_size, self.icon_size, gtk.gdk.INTERP_BILINEAR)
@@ -719,7 +607,6 @@ class WitterUI():
         tlImage.show()
         self.timelineButton.set_size_request(self.viewbutton_width,self.viewbutton_depth)
         hbox2 = self.builder.get_object("hbox2")     
-#        hbox2.shape_combine_mask(self.Mask,0,0)
         self.timelineButton.set_image(tlImage)
         self.mentionsButton = hildon.Button(gtk.HILDON_SIZE_FINGER_HEIGHT,
                                                       hildon.BUTTON_ARRANGEMENT_VERTICAL)
@@ -778,12 +665,6 @@ class WitterUI():
         image.show()
         self.fullscrButton.set_size_request(self.viewbutton_width,self.viewbutton_depth)
         self.fullscrButton.set_image(image)
-        #extraButton = self.builder.get_object("extra-controls")
-        #image2 = gtk.Image()
-        #image2.set_from_pixbuf(self.morepixbuf_on)
-        #image2.show()
-        #extraButton.set_size_request(self.viewbutton_width,self.viewbutton_depth)
-        #extraButton.set_image(image2)
         
         self.plus20Button = hildon.Button(gtk.HILDON_SIZE_FINGER_HEIGHT,
                                                       hildon.BUTTON_ARRANGEMENT_VERTICAL)
@@ -872,22 +753,6 @@ class WitterUI():
         About.connect("clicked", self.about)
         About.show()
         menu.append(About)
-
-        #invert no longer works
-        #Invert = hildon.GtkButton(gtk.HILDON_SIZE_AUTO)
-        #Invert.set_label("Invert")
-        # Attach callback to clicked signal
-        #Invert.connect("clicked", self.flipTextColour)
-        #Invert.show()
-        #menu.append(Invert)
-
-        #user can hit the big X for exit, no need for it in menu
-        #Exit = hildon.GtkButton(gtk.HILDON_SIZE_AUTO)
-        #Exit.set_label("Exit")
-        ## Attach callback to clicked signal
-        #Exit.connect("clicked", self.quit)
-        #Exit.show()
-        #menu.append(Exit)
 
         menu.show_all()
         return menu
@@ -978,7 +843,6 @@ class WitterUI():
         elif event.keyval == 65364:
             print "scrolling down"
             from gtk.gdk import CONTROL_MASK, SHIFT_MASK
-            #ievent.state & CONTROL_MASK and event.state & SHIFT_MASK:
             if event.state & SHIFT_MASK:
                 from gtk.gdk import keyval_name
                 if keyval_name(event.keyval) == "S":
@@ -991,7 +855,6 @@ class WitterUI():
         elif event.keyval == 65362:
             print "scrolling up"
             from gtk.gdk import CONTROL_MASK, SHIFT_MASK
-            #ievent.state & CONTROL_MASK and event.state & SHIFT_MASK:
             if event.state & SHIFT_MASK:
                                         
                 print "shift up"
@@ -1053,7 +916,6 @@ class WitterUI():
         #so we know when to create new horizontal button boxes
         b = hildon.Button(gtk.HILDON_SIZE_FINGER_HEIGHT,
                                                   hildon.BUTTON_ARRANGEMENT_VERTICAL)
-        #b.set_title('Dismiss')
         disImage = gtk.Image()
         disImage.set_from_file("/opt/witter/icons/dismiss.png")
         disImage.show()
@@ -1065,7 +927,6 @@ class WitterUI():
         #get the selection
         treeselection = self.treeview.get_selection()
         select1, select2 = treeselection.get_selected_rows()
-        #entry1, entry2 = self.treeview.get_selection().get_selected()
         #we might one day have more than on element selected, for now we get 1 row
         try:
             #we want to scroll to the right place in pannable area, *after* we've shown conrolls
@@ -1133,8 +994,6 @@ class WitterUI():
                                     self.builder.get_object("hbuttonbox-act4").pack_start(b3, expand=True)
 
 
-                    #rect = self.treeview.get_background_area(item, self.tvctweet)
-                    #x, y = self.treeview.convert_bin_window_to_tree_coords(rect.x, rect.y)
                 #only provide a follow button if we aren't in our own timeline (in which case we're already following
                 curView = self.getCurrentView()
                 if (curView != self.TIMELINE_VIEW):
@@ -1169,7 +1028,6 @@ class WitterUI():
         except IndexError:
             print "nothing selected"
 
-        #self.builder.get_object("hbuttonbox-act1").show_all()
         self.builder.get_object("hbuttonbox-act2").show_all()
         self.builder.get_object("hbuttonbox-act3").show_all()
         self.builder.get_object("hbuttonbox-act4").show_all()
@@ -1180,7 +1038,6 @@ class WitterUI():
         print "building stacked menu"
         win = hildon.StackableWindow()
         win.set_title("tweet")
-        #popup = gtk.Dialog()
         pannedArea = hildon.PannableArea()
         pannedArea.set_property("mov-mode", hildon.MOVEMENT_MODE_BOTH)
         vbox1 = gtk.VBox()
@@ -1226,7 +1083,6 @@ class WitterUI():
         #get the selection
         treeselection = treeview.get_selection()
         select1, select2 = treeselection.get_selected_rows()
-        #entry1, entry2 = self.treeview.get_selection().get_selected()
         #we might one day have more than on element selected, for now we get 1 row
         try:
             #we want to scroll to the right place in pannable area, *after* we've shown conrolls
@@ -1328,12 +1184,6 @@ class WitterUI():
         pannedArea.add_with_viewport(vbox1)
         win.add(pannedArea)
         win.show_all()
-        #popup.vbox.pack_start(pannedArea,True, True,10)
-        #popup.show_all()
-        #popup.set_size_request(300,350) 
-        
-        #popup.set_transient_for(self.activeWindow)
-        #popup.run()
 
     def buildUserActionMenu(self, widget, treeview, *args):
         #first hide the other controls
@@ -1488,43 +1338,44 @@ class WitterUI():
             return None
 
     def dismissActionButtons(self, *args):
-        #self.builder.get_object("hbuttonbox-act1").hide_all()
         self.builder.get_object("hbuttonbox-act2").hide_all()
         self.builder.get_object("hbuttonbox-act3").hide_all()
         self.builder.get_object("hbuttonbox-act4").hide_all()
         self.builder.get_object("hbox2").show_all()
+        
     def hideActionButtons(self):
         stack = hildon.WindowStack.get_default()
         stack.pop(1)
-        #self.dismissActionButtons()
+        
     def showActionButtons(self):
-        #self.builder.get_object("hbuttonbox-act1").show_all()
         self.builder.get_object("hbuttonbox-act2").show_all()
         self.builder.get_object("hbuttonbox-act3").show_all()
         self.builder.get_object("hbuttonbox-act4").show_all()
         self.builder.get_object("hbox2").show_all()
+        
     def showBottomBar(self):
         self.builder.get_object("hbox1").show_all()
+        
     def hideBottomBar(self):
         self.builder.get_object("hbox1").hide_all()
+        
     def showTabs(self):
         self.builder.get_object("hbox2").show_all()
+        
     def hideTabs(self):
         self.builder.get_object("hbox2").hide_all()
 
     def  gtk_widget_hide(self, widget, *args):
         widget.hide_all()
-        #widget.destroy()
 
     def reparent_loc(self, widget, newParent):
         widget.reparent(newParent)
 
     def switchViewTo(self, widget, type, treeview):
         self.switch_view_to(type, treeview)
-        
-        
 
     def switch_view_to(self, type, treeview):
+        print "switchin to: %s " % type
         if (self.getCurrentView() == self.SEARCH_VIEW):
             #switching out of search view, save search terms and reset text box
             textBuf = self.tweetText.get_buffer()
@@ -1645,7 +1496,6 @@ class WitterUI():
         
     def toggleviewto(self,type, searchTerm=None):
         stack = hildon.WindowStack.get_default()
-        #stack.pop(1)
         
         win = self.build_timeline_window(type, searchTerm=None)
         stack.pop_and_push(1,win)
@@ -1751,16 +1601,6 @@ class WitterUI():
 
     def scrolling (self, widget, direction, startx, starty):
         pass
-        #decided to try keeping top row of buttons at all times
-        #self.builder.get_object("hbox1").hide_all()
-        #self.builder.get_object("hbox2").hide_all()
-        #self.hideActionButtons()
-        #self.window.fullscreen ()
-        #fullscrButton = self.builder.get_object("fullscr")
-        #image = gtk.Image()
-        #image.set_from_file("/opt/witter/icons/unfullscr.png")
-        #image.show()
-        #fullscrButton.set_image(image)
 
     def top_colour_changed(self, widget):
         color = widget.get_color()
@@ -1838,9 +1678,7 @@ class WitterUI():
         profilevbox.pack_start(profileLocation,expand=False)
         profilehbox.pack_start(profilevbox, expand=False)
         profileTopLevelVbox.pack_start(profilehbox, expand=False)
-        #profileTopLevelVbox.pack_start(profilevbox2,expand=False)
         pannedArea.add_with_viewport(profileTopLevelVbox)
-        
 
         win.add(pannedArea)
 
@@ -1868,7 +1706,6 @@ class WitterUI():
        bitlyPwdEntry.set_text(self.controller.bitlyapikey)
        bitlyPwdEntry.set_input_mode(gtk.HILDON_GTK_INPUT_MODE_FULL)
        bitlyPwdEntry.connect("changed", self.controller.setBitlyapiki)
-       #tllabel = gtk.Label("Timeline refresh interval")
        tl_picker_button = hildon.PickerButton(gtk.HILDON_SIZE_AUTO,
                                            hildon.BUTTON_ARRANGEMENT_VERTICAL)
        tl_picker_button.set_name("HildonButton-thumb")
@@ -1955,11 +1792,6 @@ class WitterUI():
        serclearbutton.set_label("Clear old results on new search")
        serclearbutton.set_active(self.controller.search_clear)
        serclearbutton.connect("toggled", self.serclear_button_toggled)
-       #lbutton = hildon.CheckButton(gtk.HILDON_SIZE_AUTO)
-       #lbutton.set_name("HildonButton-thumb")
-       #lbutton.set_label("Tweet Location")
-       #lbutton.set_active(self.controller.location)
-       #lbutton.connect("toggled", self.location_button_toggled)
 
        gbutton2 = hildon.CheckButton(gtk.HILDON_SIZE_AUTO)
        gbutton2.set_name("HildonButton-thumb")
@@ -1980,12 +1812,10 @@ class WitterUI():
 
        vbox.pack_start(picker_button, True, True, 0)
        vbox.pack_start(gbutton, True, True, 0)
-       #vbox.pack_start(lbutton, True, True, 0)
        vbox.pack_start(gbutton2, True, True, 0)
        vbox.pack_start(serclearbutton,True,True,0)
 
        pannedArea.add_with_viewport(vbox)
-
 
        win.add(pannedArea)
 
@@ -2146,7 +1976,6 @@ class WitterUI():
             extraButton.set_image(image2)
 
     def promptForCredentials(self, *args):
-        #dialog = self.wTree.get_widget("CredentialsDialog")
         dialog = self.builder.get_object("CredentialsDialog")
         password = self.builder.get_object("Password")
         password.set_input_mode(gtk.HILDON_GTK_INPUT_MODE_FULL)
@@ -2287,7 +2116,6 @@ class WitterUI():
        hbox = gtk.HBox(False, 0)
        vboxright = gtk.VBox(False, 0)
        vboxleft = gtk.VBox(False, 0)
-       #vbox.pack_start(AccountTitle, True, True, 0)
        vboxright.pack_start(NewAccButton, False, False, 0)
        vboxright.pack_start(EditAccButton, False, False, 0)
        vboxright.pack_start(SetActiveAccButton, False, False, 0)
@@ -2351,7 +2179,6 @@ class WitterUI():
        SearchUrl.connect("changed", self.changed_search_url, account)
        selector.connect("changed", self.changed_account_type, ServiceUrl, SearchUrl, account)
        # Attach callback to the "value-changed" signal
-       #AccountType = gtk.Label("Account Type: " + account.getServicename())
 
        UsernameLabel = gtk.Label("Username")
        UsernameEntry = gtk.Entry()
@@ -2533,7 +2360,6 @@ class WitterUI():
        hbox = gtk.HBox(False, 0)
        vboxright = gtk.VBox(False, 0)
        vboxleft = gtk.VBox(False, 0)
-       #vbox.pack_start(AccountTitle, True, True, 0)
        vboxright.pack_start(NewAccButton, False, False, 0)
        vboxright.pack_start(DeleteAccButton, False, False, 0)
        vboxleft.pack_start(AccountTitle, False, False, 0)
@@ -2585,24 +2411,6 @@ class WitterUI():
 
         self.theme = theme_name
         self.load_theme_icons()
-        #curView = self.getCurrentView()
-        #if (curView == self.TIMELINE_VIEW):
-        #    self.switch_view_to("timeline")
-        #elif (curView == self.DM_VIEW):
-        #    self.switch_view_to("direct")
-        #elif (curView == self.MENTIONS_VIEW):
-        #    self.switch_view_to("mentions")
-        #elif (curView == self.PUBLIC_VIEW):
-        #    self.switch_view_to("public")
-        #elif (curView == self.TRENDS_VIEW):
-        #    rself.switch_view_to("trends")
-        #elif (curView == self.FRIENDS_VIEW):
-        #    self.switch_view_to("friends")
-        #elif (curView == self.SEARCH_VIEW):
-        #    self.switch_view_to("search")
-        #elif (curView == self.USERHIST_VIEW):
-        #    self.switch_view_to("user")
-    
    
     def text_entry_selected(self, widget,*args):
         if (self.current_orientation == "portrait"):  
@@ -2805,7 +2613,6 @@ class WitterUI():
     def TypeLetter(self, widget,  letter):
         #get the position of the current cursor
         tweetBuf = self.tweetText.get_buffer()
-        #pos = tweetBuf.get_position()
         #get the current text string
         text = tweetBuf.get_text(tweetBuf.get_start_iter(),tweetBuf.get_end_iter())
         #if passed special delete eye catcher we are actually deleteing characters
@@ -2828,6 +2635,7 @@ class WitterUI():
         print "shift to lowercase"
         self.define_portrait_keyboard()
         self.show_portrait_keyboard()
+
     def show_number_keyboard(self, widget):
         print "shift to lowercase"
         self.define_number_keyboard()

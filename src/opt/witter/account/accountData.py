@@ -24,7 +24,6 @@ class accountdata():
         self.username = ""
         self.password = None
         self.accessType = "Basic"
-        #self.accessType = "Oauth"
         #override the base url for a basic auth account, allows us to use non-twitter accounts
 
         self.access_token = None
@@ -32,7 +31,6 @@ class accountdata():
         self.bitlyusername = None
         self.bitlyapikey = None
 
-        #self.user = self.api.GetUserInfo()
         self.last_id = None
         self.oldest_id = None
         self.last_dm_id = None
