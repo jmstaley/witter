@@ -655,7 +655,6 @@ class Witter():
             counter =0
             item = store.get_iter_first()
             #just store the top 20 tweets
-            from pdb import set_trace; set_trace()
             while (item != None) and (counter < 20):
                 f5.write("senderName" + str(counter) + " = " + store.get_value(item,0)+"\n")
                 f5.write("senderId" + str(counter) + " = " +store.get_value(item,1)+"\n")
@@ -664,7 +663,7 @@ class Witter():
                 tweet = tweet.replace("\n","&CR;")
                 f5.write("tweet" + str(counter) + " = " +tweet+"\n")
                 #3 is unused now, used to be tweet colour
-                f5.write("tweetId" + str(counter) + " = " +str(store.get_value(item,4))+"\n")
+                f5.write("tweetId" + str(counter) + " = " +str(long(store.get_value(item,4)))+"\n")
                 f5.write("type" + str(counter)+" = " + str(store.get_value(item,5))+"\n")
                 f5.write("createdAt" + str(counter) + " = " +store.get_value(item,6)+"\n")
                 reply = store.get_value(item,7)
@@ -682,7 +681,7 @@ class Witter():
         except IOError, e:
             print "failed to write timeline history file " + file
        
-    def reload_timeline_data(self, file,tweetstore):
+    def reload_timeline_data(self, file, tweetstore):
         #reloads timeline/mentions/dms from files into the current active account
         try:
             config = ConfigParser.ConfigParser()
@@ -700,7 +699,7 @@ class Witter():
                 createdAt = config.get("tweets", "createdAt" + str(counter));
                 replyTo = config.get("tweets", "replyTo" + str(counter));
                 replyTo = replyTo.replace("&CR;","\n")
-                type = config.get("tweets", "type" + str(counter));
+                ttype = config.get("tweets", "type" + str(counter));
                 source = config.get("tweets", "source" + str(counter));
                 formattedTweet = config.get("tweets", "formattedTweet" + str(counter));
                 formattedTweet = formattedTweet.replace("&CR;", "\n")
@@ -718,7 +717,11 @@ class Witter():
                 else:
                     avatar = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/default/tweet.png")
                 avatar = avatar.scale_simple(60, 60, gtk.gdk.INTERP_BILINEAR)
-                tweetstore.append([senderName,senderId,tweet,"",tweet_long_id,type,createdAt,replyTo,source,avatar,formattedTweet, True])
+                tweet_row = [senderName, senderId, tweet, "",
+                             tweet_long_id, ttype, createdAt,
+                             replyTo, source, avatar, formattedTweet,
+                             True]
+                tweetstore.append(tweet_row)
                 counter=counter+1
                 
                 

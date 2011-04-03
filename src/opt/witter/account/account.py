@@ -343,7 +343,6 @@ class account():
                             text = self.escapeText(x.text)
                             text = self.controller.expandBitlyUrls(text)
                             if (x.GetPlace() !=None):
-                                from pdb import set_trace; set_trace()
                                 place = x.GetPlace().name
                             else:
                                 place=None
