@@ -2066,7 +2066,7 @@ class WitterUI():
 
     def setCursorAt(self, pos):
         self.tweetText.grab_focus()
-        tweetBuf = setl.tweetText.get_buffer()
+        tweetBuf = self.tweetText.get_buffer()
         tweetBuf.place_cursor(pos);
 
     def show_account_window(self, widget):

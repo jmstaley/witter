@@ -66,7 +66,11 @@ def RequiresPost(url):
 class OAuthApi(Api):
     def __init__(self, consumer_key, consumer_secret, access_token=None):
         if access_token:
-            Api.__init__(self, access_token.key, access_token.secret)
+            Api.__init__(self, 
+                         consumer_key=consumer_key,
+                         consumer_secret=consumer_secret,
+                         access_token_key=access_token.key, 
+                         access_token_secret=access_token.secret)
         else:
             Api.__init__(self)
         self._Consumer = oauth.OAuthConsumer(consumer_key, consumer_secret)

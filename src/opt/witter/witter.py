@@ -655,6 +655,7 @@ class Witter():
             counter =0
             item = store.get_iter_first()
             #just store the top 20 tweets
+            from pdb import set_trace; set_trace()
             while (item != None) and (counter < 20):
                 f5.write("senderName" + str(counter) + " = " + store.get_value(item,0)+"\n")
                 f5.write("senderId" + str(counter) + " = " +store.get_value(item,1)+"\n")

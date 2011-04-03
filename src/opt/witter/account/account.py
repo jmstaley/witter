@@ -24,6 +24,7 @@ import hildon
 import urllib2
 import urllib
 import httplib
+import socket
 import simplejson
 import bitly
 import accountData
@@ -128,15 +129,18 @@ class account():
         self.control.start()
         
     def connect(self):
-        if self.accountdata.password:
-            print "Establishing api for " + self.accountdata.servicename + " using basic auth"
-            self.api = twitter.Api(username=self.accountdata.username, password=self.accountdata.password)
-            self.api.SetBaseUrl(self.accountdata.baseUrl)
-            self.api.SetBaseSearchUrl(self.accountdata.searchUrl)
+#        if self.accountdata.password:
+#            print "Establishing api for " + self.accountdata.servicename + " using basic auth"
+#            self.api = twitter.Api(username=self.accountdata.username, password=self.accountdata.password)
+#            self.api.SetBaseUrl(self.accountdata.baseUrl)
+#            self.api.SetBaseSearchUrl(self.accountdata.searchUrl)
             
         if (self.accountdata.access_token != None):
             print "Establishing api for " + self.accountdata.servicename + " using oauth"
-            self.api = oauthtwitter.OAuthApi(self.CONSUMER_KEY, self.CONSUMER_SECRET, self.accountdata.access_token)
+            self.api = twitter.Api(consumer_key=self.CONSUMER_KEY, 
+                                   consumer_secret=self.CONSUMER_SECRET, 
+                                   access_token_key=self.accountdata.access_token.key,
+                                   access_token_secret=self.accountdata.access_token.secret)
         if (self.api == None):
             print "Failed to establish api for " + self.accountdata.servicename
             return False
@@ -178,7 +182,7 @@ class account():
                 avatar = avatar.scale_simple(90, 90, gtk.gdk.INTERP_BILINEAR)
                 self.controller.ui.profileImage.set_from_pixbuf(avatar)  
                 self.getSavedSearches()
-                self.getLists()
+                #self.getLists()
                 return
             except AttributeError, ae:
                 tryCount=tryCount+1
@@ -245,7 +249,10 @@ class account():
         if access_token:
             self.accountdata.access_token = access_token
             self.accountdata.accessType = "OAuth"
-            self.api = oauthtwitter.OAuthApi(self.CONSUMER_KEY, self.CONSUMER_SECRET, self.accountdata.access_token)
+            self.api = twitter.Api(consumer_key=self.CONSUMER_KEY, 
+                                   consumer_secret=self.CONSUMER_SECRET, 
+                                   access_token_key=self.accountdata.access_token.key,
+                                   access_token_secret=self.accountdata.access_token.secret)
             self.api.SetBaseUrl(self.accountdata.baseUrl)
 
     #accessor methods that return the entire list of data
@@ -275,8 +282,8 @@ class account():
                 return
             
         print "getting tweets with " + self.accountdata.username
-        print "base url = " + self.accountdata.baseUrl
-        print "base url of api object = " + self.api.GetBaseUrl()
+        #print "base url = " + self.accountdata.baseUrl
+        #print "base url of api object = " + self.api.GetBaseUrl()
         receive_count = 0
         tryCount=0
         while (tryCount <5):
@@ -284,69 +291,71 @@ class account():
                 #by default we get newer tweets
                 if (older == False):
                     if self.accountdata.last_id == None:
-                        data = self.api.GetFriendsTimeline()
-                        rtdata = self.api.GetRetweets_to_user()
+                        print "No last id"
+                        data = self.api.GetFriendsTimeline(retweets=True)
+                        #rtdata = self.api.GetRetweets_to_user()
                     else:
                         print "refreshing since" + str(self.accountdata.last_id)
-                        data = self.api.GetFriendsTimeline(since_id=self.accountdata.last_id, count=200)
-                        rtdata = self.api.GetRetweets_to_user(since_id=self.accountdata.last_id, count=200)
+                        data = self.api.GetFriendsTimeline(since_id=self.accountdata.last_id, count=100, retweets=True)
+                        #rtdata = self.api.GetRetweets_to_user(since_id=self.accountdata.last_id, count=100)
                 else:
                     if self.accountdata.oldest_id == None:
-                        data = self.api.GetFriendsTimeline(count=get_count)
+                        data = self.api.GetFriendsTimeline(count=get_count, retweets=True)
                         print "fetching retweets to user"
-                        rtdata = self.api.GetRetweets_to_user(count=get_count)
+                        #rtdata = self.api.GetRetweets_to_user(count=get_count)
                     else:
                         print "refreshing retweets prior to" + str(self.accountdata.oldest_id)
-                        data = self.api.GetFriendsTimeline(max_id=self.accountdata.oldest_id, count=get_count)
-                        rtdata = self.api.GetRetweets_to_user(max_id=self.accountdata.oldest_id, count=get_count)
-                data += rtdata
+                        data = self.api.GetFriendsTimeline(max_id=self.accountdata.oldest_id, count=get_count, retweets=True)
+                        #rtdata = self.api.GetRetweets_to_user(max_id=self.accountdata.oldest_id, count=get_count)
+                #data += rtdata
                 for x in data:
-                     if x != None:
-                         if (self.checkStoreForTweet(long(x.id),self.tweetstore)):
-                             print "Tweet already in store"
-                         else:
-                             if (self.accountdata.last_id != None):
+                    if x != None:
+                        if (self.checkStoreForTweet(long(x.id),self.tweetstore)):
+                            print "Tweet already in store"
+                        else:
+                            if (self.accountdata.last_id != None):
                                 if (x.id == self.accountdata.last_id):
                                     continue
-                             if (None != x.in_reply_to_status_id):
+                            if (None != x.in_reply_to_status_id):
                                 print "reply to " + x.in_reply_to_screen_name
                                 #we don't want anything showing up if there is no reply_to, so all teh formatting is held here including the newline
                                 reply_to = "In reply to: " + x.in_reply_to_screen_name + " - " + self.get_specific_tweet(x.in_reply_to_screen_name, x.in_reply_to_status_id)
-                             else:
+                            else:
                                 reply_to = ""
-        
-                             reply_to = reply_to.replace("&", "&amp;")
-                             #need to store id numbers for oldest/newest
-                             if self.accountdata.last_id == None:
+                               
+                            reply_to = reply_to.replace("&", "&amp;")
+                            #need to store id numbers for oldest/newest
+                            if self.accountdata.last_id == None:
                                 self.accountdata.last_id = x.id
-                             else:
+                            else:
                                 #if we have an id stored, check if this one is 'newer' if so then store it
-                                if long(self.accountdata.last_id) < long(x.id):
-                                    self.accountdata.last_id = x.id
-        
-                             #also want to track the oldest we get hold of
-                             if self.accountdata.oldest_id == None:
+                               if long(self.accountdata.last_id) < long(x.id):
+                                   self.accountdata.last_id = x.id
+                                   
+                            #also want to track the oldest we get hold of
+                            if self.accountdata.oldest_id == None:
                                 self.accountdata.oldest_id = x.id
-                             else:
+                            else:
                                 if long(self.accountdata.oldest_id) > long(x.id):
                                     self.accountdata.oldest_id = x.id
-                             #strip the source app name from the url
-                             source = self.getSourceAppname(x.source)
-                             text = self.escapeText(x.text)
-                             text = self.controller.expandBitlyUrls(text)
-                             if (x.GetPlace() !=None):
-                                 place = x.GetPlace().name
-                             else:
-                                 place=None
-                             
-                             pic = self.set_pic_for_id(str(x.user.GetId()), x.user.GetScreenName(), x.user.GetProfileImageUrl())
-                             created_at = self.parse_time(x.created_at)
-                             formatted_ts = self.format_timestamp(created_at)
-                             formatted_tweet = self.format_tweet(x.user.screen_name, text, formatted_ts, source, reply_to, loc=place)
-                             longid= long(x.id)
-                             self.tweetstore.append([ "@" + x.user.screen_name, str(x.user.GetId()), "@" + x.user.screen_name + " : " + text, "", longid, "Tweet", x.created_at, reply_to, source, pic, formatted_tweet, True])
-                             
-                             receive_count = receive_count + 1
+                            #strip the source app name from the url
+                            source = self.getSourceAppname(x.source)
+                            text = self.escapeText(x.text)
+                            text = self.controller.expandBitlyUrls(text)
+                            if (x.GetPlace() !=None):
+                                from pdb import set_trace; set_trace()
+                                place = x.GetPlace().name
+                            else:
+                                place=None
+
+                            pic = self.set_pic_for_id(str(x.user.GetId()), x.user.GetScreenName(), x.user.GetProfileImageUrl())
+                            created_at = self.parse_time(x.created_at)
+                            formatted_ts = self.format_timestamp(created_at)
+                            formatted_tweet = self.format_tweet(x.user.screen_name, text, formatted_ts, source, reply_to, loc=place)
+                            longid= long(x.id)
+                            self.tweetstore.append([ "@" + x.user.screen_name, str(x.user.GetId()), "@" + x.user.screen_name + " : " + text, "", longid, "Tweet", x.created_at, reply_to, source, pic, formatted_tweet, True])
+                            
+                            receive_count = receive_count + 1
     
                 if (receive_count > 0):
                     note = osso.SystemNote(self.osso_c)
@@ -593,11 +602,11 @@ class account():
         self.friendsstore.clear()
         try:
             #by default we get newer tweets
-            page=0
+            page=-1
             followers = self.friendCount
             moreFriends=True
             while (moreFriends):
-                data = self.api.GetFriends(page=page)
+                data = self.api.GetFriends(cursor=page)
                 
                 if ((followers -100) > 0):
                     page=page+1
@@ -938,7 +947,6 @@ class account():
         try:
             
             data = self.api.GetSavedSearches()
-
             
             print data
            
@@ -1220,7 +1228,7 @@ class account():
         #performs a 'newstyle' retweet for the specific tweet id
         print "retweeting "+str(id)
         try:
-            self.api.reTweet(long(id))
+            self.api.PostRetweet(long(id))
             note = osso.SystemNote(self.osso_c)
             result = note.system_note_infoprint("ReTweeted Successfully")
         
@@ -1247,7 +1255,7 @@ class account():
             if (auto == 0):
                 note = osso.SystemNote(self.osso_c)
                 note.system_note_dialog("Network error occured. Please try again")
-        except httplib.sslerror:
+        except socket.sslerror:
             print "Network error - SslError"
             if (auto == 0):
                 note = osso.SystemNote(self.osso_c)
