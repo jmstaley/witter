@@ -76,7 +76,7 @@ class Witter():
     #first an init method to set everything up    
     def __init__(self):
         #version of witter
-        self.version = "0.3.7"
+        self.version = "0.3.8"
         #object holding witter config
         self.config = None
         #defaults for auto-refresh
