@@ -173,7 +173,7 @@ class account():
                 self.controller.ui.profileLastTweet.set_markup("<span weight = 'bold' foreground=\"#6bd3ff\">Last Tweet: </span>" + formattedTweet)
                 
                 if (user.GetStatus().GetPlace() != None):
-                    self.controller.ui.profileLocation.set_markup("<span weight = 'bold' foreground=\"#6bd3ff\">Location: </span>" +user.GetStatus().GetPlace().name)
+                    self.controller.ui.profileLocation.set_markup("<span weight = 'bold' foreground=\"#6bd3ff\">Location: </span>" +user.GetStatus().GetPlace()['name'])
                 else:
                     if (user.GetLocation() != None):
                         self.controller.ui.profileLocation.set_markup("<span weight = 'bold' foreground=\"#6bd3ff\">Location: </span>" +user.GetLocation())
@@ -343,7 +343,7 @@ class account():
                             text = self.escapeText(x.text)
                             text = self.controller.expandBitlyUrls(text)
                             if (x.GetPlace() !=None):
-                                place = x.GetPlace().name
+                                place = x.GetPlace()['name']
                             else:
                                 place=None
 

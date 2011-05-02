@@ -1667,7 +1667,7 @@ class WitterUI():
         profileLastTweet.set_alignment(0,0) 
         profileLocation =gtk.Label()
         if (user.GetStatus().GetPlace() != None):
-               profileLocation.set_markup("<span weight = 'bold' foreground=\"#6bd3ff\">Location: </span>" +user.GetStatus().GetPlace().name)
+               profileLocation.set_markup("<span weight = 'bold' foreground=\"#6bd3ff\">Location: </span>" +user.GetStatus().GetPlace()['name'])
         else:
                 if (user.GetLocation() != None):
                     profileLocation.set_markup("<span weight = 'bold' foreground=\"#6bd3ff\">Location: </span>"+user.GetLocation())
