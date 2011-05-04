@@ -56,9 +56,9 @@ else
 fi
     """
     version = "0.3.8"           #Version of your software, e.g. "1.2.0" or "0.8.2"
-    build = "11"                 #Build number, e.g. "1" for the first build of this version of your software. Increment for later re-builds of the same version of your software.
+    build = "12"                 #Build number, e.g. "1" for the first build of this version of your software. Increment for later re-builds of the same version of your software.
                                 #Text with changelog information to be displayed in the package "Details" tab of the Maemo Application Manager
-    changeloginformation = "Update postinstall script so that it uses sh not bash" 
+    changeloginformation = "Update python-twitter to 0.8.3 and change GetReplies to GetMentions newer api method" 
     dir_name = "src"            #Name of the subfolder containing your package source files (e.g. usr\share\icons\hicolor\scalable\myappicon.svg, usr\lib\myapp\somelib.py). We suggest to leave it named src in all projects and will refer to that in the wiki article on maemo.org
     #Thanks to DareTheHair from talk.maemo.org for this snippet that recursively builds the file list 
     for root, dirs, files in os.walk(dir_name):
