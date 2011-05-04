@@ -17,7 +17,7 @@
 '''A library that provides a Python interface to the Twitter API'''
 
 __author__ = 'python-twitter@googlegroups.com'
-__version__ = '0.8.1'
+__version__ = '0.8.3'
 
 
 import base64
@@ -132,7 +132,8 @@ class Status(object):
                coordinates=None,
                contributors=None,
                retweeted=None,
-               retweeted_status=None):
+               retweeted_status=None,
+               retweet_count=None):
     '''An object to hold a Twitter status message.
 
     This class is normally instantiated by the twitter.Api class and
@@ -159,6 +160,16 @@ class Status(object):
       now:
         The current time, if the client choses to set it.
         Defaults to the wall clock time. [Optional]
+      urls:
+      user_mentions:
+      hashtags:
+      geo:
+      place:
+      coordinates:
+      contributors:
+      retweeted:
+      retweeted_status:
+      retweet_count:
     '''
     self.created_at = created_at
     self.favorited = favorited
@@ -181,6 +192,7 @@ class Status(object):
     self.coordinates = coordinates
     self.contributors = contributors
     self.retweeted_status = retweeted_status
+    self.retweet_count = retweet_count
 
   def GetCreatedAt(self):
     '''Get the time this status message was posted.
@@ -473,6 +485,15 @@ class Status(object):
   retweeted_status = property(GetRetweeted_status, SetRetweeted_status,
                               doc='')
 
+  def GetRetweetCount(self):
+    return self._retweet_count
+
+  def SetRetweetCount(self, retweet_count):
+    self._retweet_count = retweet_count
+
+  retweet_count = property(GetRetweetCount, SetRetweetCount,
+                           doc='')
+
   def __ne__(self, other):
     return not self.__eq__(other)
 
@@ -495,7 +516,8 @@ class Status(object):
              self.place == other.place and \
              self.coordinates == other.coordinates and \
              self.contributors == other.contributors and \
-             self.retweeted_status == other.retweeted_status
+             self.retweeted_status == other.retweeted_status and \
+             self.retweet_count == other.retweet_count
     except AttributeError:
       return False
 
@@ -564,6 +586,8 @@ class Status(object):
       data['hashtags'] = [h.text for h in self.hashtags]
     if self.retweeted_status:
       data['retweeted_status'] = self.retweeted_status.AsDict()
+    if self.retweet_count:
+      data['retweet_count'] = self.retweet_count
     return data
 
   @staticmethod
@@ -612,7 +636,8 @@ class Status(object):
                   place=data.get('place', None),
                   coordinates=data.get('coordinates', None),
                   contributors=data.get('contributors', None),
-                  retweeted_status=retweeted_status)
+                  retweeted_status=retweeted_status,
+                  retweet_count=data.get('retweet_count', None))
 
 
 class User(object):
@@ -642,6 +667,12 @@ class User(object):
     user.friends_count
     user.favourites_count
     user.geo_enabled
+    user.verified
+    user.lang
+    user.notifications
+    user.contributors_enabled
+    user.created_at
+    user.listed_count
   '''
   def __init__(self,
                id=None,
@@ -665,7 +696,13 @@ class User(object):
                favourites_count=None,
                url=None,
                status=None,
-               geo_enabled=None):
+               geo_enabled=None,
+               verified=None,
+               lang=None,
+               notifications=None,
+               contributors_enabled=None,
+               created_at=None,
+               listed_count=None):
     self.id = id
     self.name = name
     self.screen_name = screen_name
@@ -688,6 +725,12 @@ class User(object):
     self.url = url
     self.status = status
     self.geo_enabled = geo_enabled
+    self.verified = verified
+    self.lang = lang
+    self.notifications = notifications
+    self.contributors_enabled = contributors_enabled
+    self.created_at = created_at
+    self.listed_count = listed_count
 
   def GetId(self):
     '''Get the unique id of this user.
@@ -957,6 +1000,26 @@ class User(object):
   friends_count = property(GetFriendsCount, SetFriendsCount,
                            doc='The number of friends for this user.')
 
+  def GetListedCount(self):
+    '''Get the listed count for this user.
+
+    Returns:
+      The number of lists this user belongs to.
+    '''
+    return self._listed_count
+
+  def SetListedCount(self, count):
+    '''Set the listed count for this user.
+
+    Args:
+      count:
+        The number of lists this user belongs to.
+    '''
+    self._listed_count = count
+
+  listed_count = property(GetListedCount, SetListedCount,
+                          doc='The number of lists this user belongs to.')
+
   def GetFollowersCount(self):
     '''Get the follower count for this user.
 
@@ -1037,6 +1100,106 @@ class User(object):
   geo_enabled = property(GetGeoEnabled, SetGeoEnabled,
                          doc='The value of twitter.geo_enabled for this user.')
 
+  def GetVerified(self):
+    '''Get the setting of verified for this user.
+
+    Returns:
+      True/False if user is a verified account
+    '''
+    return self._verified
+
+  def SetVerified(self, verified):
+    '''Set twitter.verified for this user.
+
+    Args:
+      verified:
+        True/False if user is a verified account
+    '''
+    self._verified = verified
+
+  verified = property(GetVerified, SetVerified,
+                      doc='The value of twitter.verified for this user.')
+
+  def GetLang(self):
+    '''Get the setting of lang for this user.
+
+    Returns:
+      language code of the user
+    '''
+    return self._lang
+
+  def SetLang(self, lang):
+    '''Set twitter.lang for this user.
+
+    Args:
+      lang:
+        language code for the user
+    '''
+    self._lang = lang
+
+  lang = property(GetLang, SetLang,
+                  doc='The value of twitter.lang for this user.')
+
+  def GetNotifications(self):
+    '''Get the setting of notifications for this user.
+
+    Returns:
+      True/False for the notifications setting of the user
+    '''
+    return self._notifications
+
+  def SetNotifications(self, notifications):
+    '''Set twitter.notifications for this user.
+
+    Args:
+      notifications:
+        True/False notifications setting for the user
+    '''
+    self._notifications = notifications
+
+  notifications = property(GetNotifications, SetNotifications,
+                           doc='The value of twitter.notifications for this user.')
+
+  def GetContributorsEnabled(self):
+    '''Get the setting of contributors_enabled for this user.
+
+    Returns:
+      True/False contributors_enabled of the user
+    '''
+    return self._contributors_enabled
+
+  def SetContributorsEnabled(self, contributors_enabled):
+    '''Set twitter.contributors_enabled for this user.
+
+    Args:
+      contributors_enabled:
+        True/False contributors_enabled setting for the user
+    '''
+    self._contributors_enabled = contributors_enabled
+
+  contributors_enabled = property(GetContributorsEnabled, SetContributorsEnabled,
+                                  doc='The value of twitter.contributors_enabled for this user.')
+
+  def GetCreatedAt(self):
+    '''Get the setting of created_at for this user.
+
+    Returns:
+      created_at value of the user
+    '''
+    return self._created_at
+
+  def SetCreatedAt(self, created_at):
+    '''Set twitter.created_at for this user.
+
+    Args:
+      created_at:
+        created_at value for the user
+    '''
+    self._created_at = created_at
+
+  created_at = property(GetCreatedAt, SetCreatedAt,
+                        doc='The value of twitter.created_at for this user.')
+
   def __ne__(self, other):
     return not self.__eq__(other)
 
@@ -1064,7 +1227,14 @@ class User(object):
              self.favourites_count == other.favourites_count and \
              self.friends_count == other.friends_count and \
              self.status == other.status and \
-             self.geo_enabled == other.geo_enabled
+             self.geo_enabled == other.geo_enabled and \
+             self.verified == other.verified and \
+             self.lang == other.lang and \
+             self.notifications == other.notifications and \
+             self.contributors_enabled == other.contributors_enabled and \
+             self.created_at == other.created_at and \
+             self.listed_count == other.listed_count
+
     except AttributeError:
       return False
 
@@ -1137,6 +1307,19 @@ class User(object):
       data['favourites_count'] = self.favourites_count
     if self.geo_enabled:
       data['geo_enabled'] = self.geo_enabled
+    if self.verified:
+      data['verified'] = self.verified
+    if self.lang:
+      data['lang'] = self.lang
+    if self.notifications:
+      data['notifications'] = self.notifications
+    if self.contributors_enabled:
+      data['contributors_enabled'] = self.contributors_enabled
+    if self.created_at:
+      data['created_at'] = self.created_at
+    if self.listed_count:
+      data['listed_count'] = self.listed_count
+
     return data
 
   @staticmethod
@@ -1175,7 +1358,13 @@ class User(object):
                 time_zone = data.get('time_zone', None),
                 url=data.get('url', None),
                 status=status,
-                geo_enabled=data.get('geo_enabled', None))
+                geo_enabled=data.get('geo_enabled', None),
+                verified=data.get('verified', None),
+                lang=data.get('lang', None),
+                notifications=data.get('notifications', None),
+                contributors_enabled=data.get('contributors_enabled', None),
+                created_at=data.get('created_at', None),
+                listed_count=data.get('listed_count', None))
 
 class List(object):
   '''A class representing the List structure used by the twitter API.
@@ -2714,23 +2903,6 @@ class Api(object):
     data = self._ParseAndCheckTwitter(json)
     return [Status.NewFromJsonDict(s) for s in data]
 
-  def PostRetweet(self, statusid):
-    ''' Retweets the tweet identified
-    
-    Args:
-      statusid:
-        The ID of the tweet which should be retweeted
-        
-    Returns: 
-      The original post with retweet details embedded
-    '''
-    if not self._oauth_consumer:
-      raise TwitterError("The twitter.Api instsance must be authenticated.")
-    url = '%s/statuses/retweet/%s.json' % (self.base_url, statusid)
-    json = self._FetchUrl(url, post_data=True)
-    data = self._ParseAndCheckTwitter(json)
-    return Status.NewFromJsonDict(data)
-
   def GetFriends(self, user=None, cursor=-1):
     '''Fetch the sequence of twitter.User instances, one for each friend.
 
@@ -3595,7 +3767,7 @@ class Api(object):
       opener.addheaders.append(('Accept-Encoding', 'gzip'))
 
     if self._oauth_consumer is not None:
-      if type(post_data) == dict and http_method == "POST":
+      if post_data and http_method == "POST":
         parameters = post_data.copy()
 
       req = oauth.Request.from_consumer_and_token(self._oauth_consumer,

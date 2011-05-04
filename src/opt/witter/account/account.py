@@ -403,16 +403,16 @@ class account():
                 #by default we get newer tweets
                 if (older == False):
                     if self.accountdata.last_mention_id == None:
-                        data = self.api.GetReplies()
+                        data = self.api.GetMentions()
                     else:
                         print "refreshing since" + str(self.accountdata.last_mention_id)
-                        data = self.api.GetReplies(since_id=self.accountdata.last_mention_id)
+                        data = self.api.GetMentions(since_id=self.accountdata.last_mention_id)
                 else:
                     if self.accountdata.oldest_mention_id == None:
-                        data = self.api.GetReplies(count=get_count)
+                        data = self.api.GetMentions(count=get_count)
                     else:
                         print "refreshing prior to" + str(self.accountdata.oldest_mention_id)
-                        data = self.api.GetReplies(max_id=self.accountdata.oldest_mention_id, count=get_count)
+                        data = self.api.GetMentions(max_id=self.accountdata.oldest_mention_id, count=get_count)
     
                 for x in data:
                      if (self.checkStoreForTweet(long(x.id),self.mentionstore)):
