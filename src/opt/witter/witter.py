@@ -1108,6 +1108,8 @@ class Witter():
                             print "bitly gave error response"
                         except KeyError:
                             print "bitly gave key error response"
+                        except TypeError:
+                            print "No bitly data"
         return data
 
 
