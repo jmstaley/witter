@@ -106,7 +106,6 @@ class WitterUI():
             "on_plus20_clicked" : controller.get20More,
             "on_plus50_clicked" : controller.get50More,
             "on_plus100_clicked" : controller.get100More,
-            "on_plus200_clicked" : controller.get200More,
 
         }
         self.builder.connect_signals(dic)
@@ -459,11 +458,9 @@ class WitterUI():
         self.plus20Button.connect("clicked",self.controller.get20More)
         self.plus50Button.connect("clicked",self.controller.get50More)
         self.plus100Button.connect("clicked",self.controller.get100More)
-        self.plus200Button.connect("clicked",self.controller.get200More)
         moreBox.pack_start(self.plus20Button)
         moreBox.pack_start(self.plus50Button)
         moreBox.pack_start(self.plus100Button)
-        moreBox.pack_start(self.plus200Button)
         
         bottom = hildon.Button(gtk.HILDON_SIZE_FINGER_HEIGHT,
                                                       hildon.BUTTON_ARRANGEMENT_VERTICAL)
@@ -578,8 +575,6 @@ class WitterUI():
         
         self.plus100pixbuf = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.theme + "/plus100.png")
         self.plus100pixbuf  = self.plus100pixbuf.scale_simple(self.icon_size, self.icon_size, gtk.gdk.INTERP_BILINEAR)
-        self.plus200pixbuf = gtk.gdk.pixbuf_new_from_file("/opt/witter/icons/" + self.theme + "/plus200.png")
-        self.plus200pixbuf = self.plus200pixbuf.scale_simple(self.icon_size, self.icon_size, gtk.gdk.INTERP_BILINEAR)
         
         print "pixbufs loaded for "+ self.theme+" theme" 
         
@@ -673,8 +668,6 @@ class WitterUI():
                                                       hildon.BUTTON_ARRANGEMENT_VERTICAL)
         self.plus100Button = hildon.Button(gtk.HILDON_SIZE_FINGER_HEIGHT,
                                                       hildon.BUTTON_ARRANGEMENT_VERTICAL)
-        self.plus200Button = hildon.Button(gtk.HILDON_SIZE_FINGER_HEIGHT,
-                                                      hildon.BUTTON_ARRANGEMENT_VERTICAL)
         plus20 = gtk.Image()
         plus20.set_from_pixbuf(self.plus20pixbuf)
         plus20.show()
@@ -687,10 +680,6 @@ class WitterUI():
         plus100.set_from_pixbuf(self.plus100pixbuf)
         plus100.show()
         self.plus100Button.set_image(plus100)
-        plus200 = gtk.Image()
-        plus200.set_from_pixbuf(self.plus200pixbuf)
-        plus200.show()
-        self.plus200Button.set_image(plus200)
         
         
         

@@ -1047,9 +1047,6 @@ class Witter():
     def get100More(self, *args):
         self.getMore(100)
 
-    def get200More(self, *args):
-        self.getMore(200)
-
     def showHist(self, widget, user):
         self.ui.showBusy(1)
         self.ui.hideActionButtons()
