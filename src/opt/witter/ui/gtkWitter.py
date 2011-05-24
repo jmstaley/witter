@@ -2042,8 +2042,11 @@ class WitterUI():
         textBuf.set_text(text)
 
     def getEntryText(self):
-        text_buf = self.tweetText.get_buffer()
-        return text_buf.get_text(text_buf.get_start_iter(),text_buf.get_end_iter())
+        if getattr(self, 'tweetText', None):
+            text_buf = self.tweetText.get_buffer()
+            return text_buf.get_text(text_buf.get_start_iter(),text_buf.get_end_iter())
+        else:
+            return ''
     
     def set_title(self, title):
         self.window.set_title(title)
