@@ -57,9 +57,21 @@ else
 fi
     """
     version = "0.3.8"           #Version of your software, e.g. "1.2.0" or "0.8.2"
-    build = "18"                 #Build number, e.g. "1" for the first build of this version of your software. Increment for later re-builds of the same version of your software.
+    build = "19"                 #Build number, e.g. "1" for the first build of this version of your software. Increment for later re-builds of the same version of your software.
                                 #Text with changelog information to be displayed in the package "Details" tab of the Maemo Application Manager
-    changeloginformation = "Remove +200 button due to changes in api, add in missing icon to Ayro theme" 
+    changeloginformation = """
++ Fix bug that caused crash if ui not initialised and search terms available
++ Make sure that search is only refreshed in search view
++ Remove +200 button due to changes in api, add in missing icon to Ayro theme
++ Add work around for bitly giving NoneType errors
++ Update python-twitter to 0.8.3 and change GetReplies to GetMentions newer api method (patch submitted back upstream)
++ Add post install script to clear cache
++ Make sure that oauth2 is in dependencies
++ Update storage of tweet ids enabling proper retweeting of old tweets
++ Update python-witter module
++ Adjust oauth to use new twitter module
++ Update url matching code so urls definately only appear once in tweet view
+"""
     dir_name = "src"            #Name of the subfolder containing your package source files (e.g. usr\share\icons\hicolor\scalable\myappicon.svg, usr\lib\myapp\somelib.py). We suggest to leave it named src in all projects and will refer to that in the wiki article on maemo.org
     #Thanks to DareTheHair from talk.maemo.org for this snippet that recursively builds the file list 
     for root, dirs, files in os.walk(dir_name):
