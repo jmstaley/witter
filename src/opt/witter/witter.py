@@ -964,7 +964,7 @@ class Witter():
         self.ui.showBusy(1)
         self.establish_connection()
         if searchTerms == None:
-            if (autoval == 1):
+            if (autoval == 1) and (self.ui.getCurrentView == self.ui.SEARCH_VIEW):
                 #if we manually his search get the latest content of the search box
                 searchTerms = self.ui.getEntryText()
             else:
