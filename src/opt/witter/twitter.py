@@ -2514,8 +2514,8 @@ class Api(object):
   def GetFriendsTimeline(self,
                          user=None,
                          count=None,
-                         max_id=None,
                          page=None,
+                         max_id=None,
                          since_id=None,
                          retweets=None,
                          include_entities=None):
@@ -2572,10 +2572,10 @@ class Api(object):
       except ValueError:
         raise TwitterError("'page' must be an integer")
     if max_id:
-        try:
-            parameters['max_id'] = int(max_id)
-        except ValueError:
-            raise TwitterError("'max_id' must be an integer")
+      try:
+        parameters['max_id'] = int(max_id)
+      except ValueError:
+        raise TwitterError("'max_id' must be an integer")
     if since_id:
       parameters['since_id'] = since_id
     if retweets:
@@ -2975,15 +2975,15 @@ class Api(object):
     data = self._ParseAndCheckTwitter(json)
     return data
 
-  def GetFollowers(self, page=None):
+  def GetFollowers(self, cursor=-1):
     '''Fetch the sequence of twitter.User instances, one for each follower
 
     The twitter.Api instance must be authenticated.
 
     Args:
-      page:
-        Specifies the page of results to retrieve.
-        Note: there are pagination limits. [Optional]
+      cursor:
+        Specifies the Twitter API Cursor location to start at. [Optional]
+        Note: there are pagination limits.
 
     Returns:
       A sequence of twitter.User instances, one for each follower
@@ -2991,27 +2991,18 @@ class Api(object):
     if not self._oauth_consumer:
       raise TwitterError("twitter.Api instance must be authenticated")
     url = '%s/statuses/followers.json' % self.base_url
-    parameters = {}
-    if page:
-      parameters['page'] = page
-    json = self._FetchUrl(url, parameters=parameters)
-    data = self._ParseAndCheckTwitter(json)
-    return [User.NewFromJsonDict(x) for x in data]
-
-  def GetSavedSearches(self):
-    ''' Fetch the saved searches for the authenticated user
-
-    The twitter.Api instance must be authenticated.
-
-    Returns:
-      A sequence of search ids
-    '''
-    if not self._oauth_consumer:
-      raise Twittererror("twitter.Api instance must be authenticated")
-    url = '%s/saved_searches.json' % self.base_url
-    json = self._FetchUrl(url)
-    data = self._ParseAndCheckTwitter(json)
-    return data
+    result = []
+    while True:
+      parameters = { 'cursor': cursor }
+      json = self._FetchUrl(url, parameters=parameters)
+      data = self._ParseAndCheckTwitter(json)
+      result += [User.NewFromJsonDict(x) for x in data['users']]
+      if 'next_cursor' in data:
+        if data['next_cursor'] == 0 or data['next_cursor'] == data['previous_cursor']:
+          break
+      else:
+        break
+    return result
 
   def GetFeatured(self):
     '''Fetch the sequence of twitter.User instances featured on twitter.com
@@ -3287,7 +3278,10 @@ class Api(object):
     if since_id:
       parameters['since_id'] = since_id
     if max_id:
-      parameters['max_id'] = max_id
+      try:
+        parameters['max_id'] = long(max_id)
+      except:
+        raise TwitterError("max_id must be an integer")
     if page:
       parameters['page'] = page
 

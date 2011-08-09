@@ -59,6 +59,8 @@ import conic
 import ui
 import account
 
+import oauth2 as oauth
+from cgi import parse_qsl
 
 gtk.gdk.threads_init()
 
@@ -105,8 +107,8 @@ class Witter():
         self.bitlyapikey = ""
         self.access_token = ""
         self.user = ""
-        self.CONSUMER_KEY = 'c0glxehHLYgzDqDMLjanA'
-        self.CONSUMER_SECRET = 'V37SuM6o7PddlqqosLpYtIqyaLj0mgnFkGGKkJjN6I'
+        self.CONSUMER_KEY = 'jReNTbx4mabvkDegSpcFHw'
+        self.CONSUMER_SECRET = 'M8HZA6VnHAOJRLXudiFl3RbFN6gbNIxebhlMbP0Xk'
         self.textcolour = "#FFFFFF"
 
         #make the hildon program
@@ -775,6 +777,7 @@ class Witter():
              twitter = oauthtwitter.OAuthApi(self.CONSUMER_KEY, self.CONSUMER_SECRET)
              
              self.request_token = twitter.getRequestToken()
+
              print "obtained oauth request_token"
              print "requesting auth url"
              authorization_url = twitter.getAuthorizationURL(self.request_token)

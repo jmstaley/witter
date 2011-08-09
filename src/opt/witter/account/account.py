@@ -46,8 +46,8 @@ class account():
 
 
     #these are the keys for witter on twitter
-    CONSUMER_KEY = 'c0glxehHLYgzDqDMLjanA'
-    CONSUMER_SECRET = 'V37SuM6o7PddlqqosLpYtIqyaLj0mgnFkGGKkJjN6I'
+    CONSUMER_KEY = 'jReNTbx4mabvkDegSpcFHw'
+    CONSUMER_SECRET = 'M8HZA6VnHAOJRLXudiFl3RbFN6gbNIxebhlMbP0Xk'
     ACTIVE = 1
     INACTIVE = 2
     status = ""
@@ -122,7 +122,8 @@ class account():
 
     def stop_Location(self):
         print "stop location tracking"
-        self.control.stop()
+        if getattr(self, 'control', None):
+            self.control.stop()
 
     def start_Location(self):
         print "start location tracking"
