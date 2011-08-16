@@ -23,7 +23,7 @@ if __name__ == "__main__":
     p.mail="jon@spandexbob.co.uk"
     p.depends = "python2.5 (>= 2.5.1-1osso5), python2.5-osso, python-hildon, python-simplejson, python2.5-pycurl, python-twitter, python-conic, python-dbus, python-location, python-oauth2"
     p.section="user/network"
-    p.icon = "/home/jon/devel/witter/fremantle/witter.jpg"
+    p.icon = "/home/jon/witter/src/usr/share/icons/hicolor/witter.png"
     p.arch="all"                #should be all for python, any for all arch
     p.urgency="low"             #not used in maemo onl for deb os
     p.distribution="fremantle"
@@ -57,7 +57,7 @@ else
 fi
     """
     version = "0.3.8"           #Version of your software, e.g. "1.2.0" or "0.8.2"
-    build = "19"                 #Build number, e.g. "1" for the first build of this version of your software. Increment for later re-builds of the same version of your software.
+    build = "21"                 #Build number, e.g. "1" for the first build of this version of your software. Increment for later re-builds of the same version of your software.
                                 #Text with changelog information to be displayed in the package "Details" tab of the Maemo Application Manager
     changeloginformation = """
 + Fix bug that caused crash if ui not initialised and search terms available
@@ -71,6 +71,7 @@ fi
 + Update python-witter module
 + Adjust oauth to use new twitter module
 + Update url matching code so urls definately only appear once in tweet view
++ Update oauth details
 """
     dir_name = "src"            #Name of the subfolder containing your package source files (e.g. usr\share\icons\hicolor\scalable\myappicon.svg, usr\lib\myapp\somelib.py). We suggest to leave it named src in all projects and will refer to that in the wiki article on maemo.org
     #Thanks to DareTheHair from talk.maemo.org for this snippet that recursively builds the file list 
