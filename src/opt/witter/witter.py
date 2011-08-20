@@ -108,8 +108,6 @@ class Witter():
         self.bitlyapikey = ""
         self.access_token = ""
         self.user = ""
-        self.CONSUMER_KEY = 'jReNTbx4mabvkDegSpcFHw'
-        self.CONSUMER_SECRET = 'M8HZA6VnHAOJRLXudiFl3RbFN6gbNIxebhlMbP0Xk'
         self.textcolour = "#FFFFFF"
 
         #make the hildon program
@@ -775,7 +773,9 @@ class Witter():
 
     def configOauth(self, widget, account, *args):
          try:
-             twitter = oauthtwitter.OAuthApi(self.CONSUMER_KEY, self.CONSUMER_SECRET)
+             consumer_key = KEYS[account.servicename]['key']
+             consumer_secret = KEYS[account.servicename]['secret']
+             twitter = oauthtwitter.OAuthApi(consumer_key, consumer_secret)
              
              self.request_token = twitter.getRequestToken()
 
@@ -809,17 +809,18 @@ class Witter():
 
 
     def getAccessToken(self, widget):
-         pin = self.ui.getOauthPIN()
-         twitter = oauthtwitter.OAuthApi(self.CONSUMER_KEY, self.CONSUMER_SECRET, self.request_token)
-         access_token = twitter.getAccessToken(pin)
-         print access_token
-         self.access_token = access_token
-         api = oauthtwitter.OAuthApi(self.CONSUMER_KEY, self.CONSUMER_SECRET, access_token)
-         self.auth_account.access_token = access_token
-         self.ui.builder.get_object("OauthDialog").hide_all()
-         self.ui.reload_account_window(widget, self.auth_account)
+        consumer_key = KEYS[self.auth_account.servicename]['key']
+        consumer_secret = KEYS[self.auth_account.servicename]['secret']
+        pin = self.ui.getOauthPIN()
+        twitter = oauthtwitter.OAuthApi(consumer_key, consumer_secret, self.request_token)
+        access_token = twitter.getAccessToken(pin)
+        self.access_token = access_token
+        api = oauthtwitter.OAuthApi(consumer_key, consumer_secret, access_token)
+        self.auth_account.access_token = access_token
+        self.ui.builder.get_object("OauthDialog").hide_all()
+        self.ui.reload_account_window(widget, self.auth_account)
 
-    def  store_creds(self, widget, *args):
+    def store_creds(self, widget, *args):
         print "store_creds called"
 
         #store the values set
