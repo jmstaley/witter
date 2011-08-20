@@ -41,13 +41,14 @@ import pynotify
 import dbus
 import location
 
+KEYS = {'Twitter': {'key': 'jReNTbx4mabvkDegSpcFHw',
+                    'secret': 'M8HZA6VnHAOJRLXudiFl3RbFN6gbNIxebhlMbP0Xk'},
+        'Identi.ca': {'key': '67339eb3cb4a3e8851721210e2c103ef',
+                     'secret': '5b19bc22e8973ba7dab3d80151568bdc'}}
 
 class account():
 
-
     #these are the keys for witter on twitter
-    CONSUMER_KEY = 'jReNTbx4mabvkDegSpcFHw'
-    CONSUMER_SECRET = 'M8HZA6VnHAOJRLXudiFl3RbFN6gbNIxebhlMbP0Xk'
     ACTIVE = 1
     INACTIVE = 2
     status = ""
@@ -138,8 +139,10 @@ class account():
             
         if (self.accountdata.access_token != None):
             print "Establishing api for " + self.accountdata.servicename + " using oauth"
-            self.api = twitter.Api(consumer_key=self.CONSUMER_KEY, 
-                                   consumer_secret=self.CONSUMER_SECRET, 
+            consumer_key = KEYS[self.accountdata.servicename]['key']
+            consumer_secret = KEYS[self.accountdata.servicename]['secret']
+            self.api = twitter.Api(consumer_key=consumer_key, 
+                                   consumer_secret=consumer_secret, 
                                    access_token_key=self.accountdata.access_token.key,
                                    access_token_secret=self.accountdata.access_token.secret)
         if (self.api == None):
@@ -250,8 +253,10 @@ class account():
         if access_token:
             self.accountdata.access_token = access_token
             self.accountdata.accessType = "OAuth"
-            self.api = twitter.Api(consumer_key=self.CONSUMER_KEY, 
-                                   consumer_secret=self.CONSUMER_SECRET, 
+            consumer_key = KEYS[self.accountdata.servicename]['key']
+            consumer_secret = KEYS[self.accountdata.servicename]['secret']
+            self.api = twitter.Api(consumer_key=consumer_key, 
+                                   consumer_secret=consumer_secret, 
                                    access_token_key=self.accountdata.access_token.key,
                                    access_token_secret=self.accountdata.access_token.secret)
             self.api.SetBaseUrl(self.accountdata.baseUrl)

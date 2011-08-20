@@ -58,6 +58,7 @@ import dbus.glib
 import conic 
 import ui
 import account
+from account import KEYS
 
 import oauth2 as oauth
 from cgi import parse_qsl
